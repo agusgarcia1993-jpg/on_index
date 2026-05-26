@@ -2346,23 +2346,19 @@ async function saveToSheets(payload) {
   if(!GAS_URL) { setSyncStatus('local'); return false; }
   try {
     setSyncStatus('syncing');
-    // Usamos GET con el payload codificado en la query string para evitar problemas
-    // de CORS (preflight OPTIONS) que bloquean POST desde dominios externos como Vercel.
-    // El GAS script recibe esto en doGet() → e.parameter.method === 'POST'
+    // JSONP para evitar CORS — mismo mecanismo que loadFromSheets
     const bodyObj = {action:'save', user:_currentUser||'unknown', data:payload};
-    const bodyStr = JSON.stringify(bodyObj);
-    const url = GAS_URL + '?method=POST&payload=' + encodeURIComponent(bodyStr) + '&t=' + Date.now();
-    const res = await fetch(url);
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
-    if(json.status === 'ok') {
+    const bodyStr = encodeURIComponent(JSON.stringify(bodyObj));
+    const json = await gasJSONP(GAS_URL + '?method=POST&payload=' + bodyStr);
+    if(json && json.status === 'ok') {
       _lastRemoteSave = Date.now();
       localStorage.setItem('on_last_remote_save', String(_lastRemoteSave));
       _pendingSync = false;
       setSyncStatus('ok');
+      console.log('[ObraNord Sheets] Guardado OK en Sheets');
       return true;
     }
-    throw new Error(json.message || 'error en GAS');
+    throw new Error((json && json.message) || 'error en GAS');
   } catch(e) {
     setSyncStatus('local');
     _pendingSync = true;
@@ -2477,7 +2473,7 @@ async function logAudit(action, detail) {
   log.unshift(entry);
   if(log.length>500) log=log.slice(0,500);
   localStorage.setItem('on_audit',JSON.stringify(log));
-  if(GAS_URL){try{const _ap=encodeURIComponent(JSON.stringify({action:'audit',entry}));fetch(GAS_URL+'?method=POST&payload='+_ap+'&t='+Date.now());}catch(e){}}
+  if(GAS_URL){try{gasJSONP(GAS_URL+'?method=POST&payload='+encodeURIComponent(JSON.stringify({action:'audit',entry})));}catch(e){}}
 }
 
 function saveData(auditAction, auditDetail) {
@@ -8843,8 +8839,7 @@ async function syncFromSheets() {
   if(!url){showToast('Configura la URL primero','er');return;}
   document.getElementById('sheets-test-result').innerHTML='🔄 Cargando datos desde Sheets…';
   try {
-    const res = await fetch(url+'?action=load&t='+Date.now());
-    const json = await res.json();
+    const json = await gasJSONP(url+'?action=load');
     if(json.status!=='ok'||!json.data){document.getElementById('sheets-test-result').innerHTML='<span style="color:var(--err)">Sin datos en Sheets todavía</span>';return;}
     const b = json.data;
     const localDate = new Date(_lastRemoteSave||0);
