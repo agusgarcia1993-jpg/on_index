@@ -2346,23 +2346,89 @@ async function saveToSheets(payload) {
   if(!GAS_URL) { setSyncStatus('local'); return false; }
   try {
     setSyncStatus('syncing');
-    // JSONP para evitar CORS — mismo mecanismo que loadFromSheets
     const bodyObj = {action:'save', user:_currentUser||'unknown', data:payload};
-    const bodyStr = encodeURIComponent(JSON.stringify(bodyObj));
-    const json = await gasJSONP(GAS_URL + '?method=POST&payload=' + bodyStr);
+    const bodyStr = JSON.stringify(bodyObj);
+    console.log('[ObraNord Sheets] Enviando payload, tamaño:', bodyStr.length, 'chars');
+
+    // Si el payload es muy grande para GET (~6000 chars), usar chunked save
+    const encoded = encodeURIComponent(bodyStr);
+    if(encoded.length > 6000) {
+      console.log('[ObraNord Sheets] Payload grande — usando chunked JSONP');
+      return await saveToSheetsChunked(payload);
+    }
+
+    const json = await gasJSONP(GAS_URL + '?method=POST&payload=' + encoded);
     if(json && json.status === 'ok') {
       _lastRemoteSave = Date.now();
       localStorage.setItem('on_last_remote_save', String(_lastRemoteSave));
       _pendingSync = false;
       setSyncStatus('ok');
-      console.log('[ObraNord Sheets] Guardado OK en Sheets');
+      console.log('[ObraNord Sheets] ✅ Guardado OK');
       return true;
     }
-    throw new Error((json && json.message) || 'error en GAS');
+    throw new Error((json && json.message) || 'respuesta inesperada del GAS');
   } catch(e) {
     setSyncStatus('local');
     _pendingSync = true;
     console.warn('[ObraNord Sheets] saveToSheets falló:', e.message);
+    return false;
+  }
+}
+
+// Guarda dividiendo el payload en partes para evitar el límite de URL GET
+async function saveToSheetsChunked(payload) {
+  try {
+    // Estrategia: guardar _raw con todo el JSON de una vez usando un iframe oculto
+    // que hace POST real (sin restricción de tamaño)
+    const bodyObj = {action:'save', user:_currentUser||'unknown', data:payload};
+    const bodyStr = JSON.stringify(bodyObj);
+
+    await new Promise(function(resolve, reject) {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = GAS_URL;
+      form.target = '_gas_iframe_' + Date.now();
+      form.style.display = 'none';
+
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'payload';
+      input.value = bodyStr;
+      form.appendChild(input);
+
+      const iframe = document.createElement('iframe');
+      iframe.name = form.target;
+      iframe.style.display = 'none';
+      iframe.onload = function() {
+        setTimeout(function() {
+          iframe.remove();
+          form.remove();
+          resolve();
+        }, 500);
+      };
+      iframe.onerror = function() { iframe.remove(); form.remove(); reject(new Error('iframe error')); };
+
+      document.body.appendChild(iframe);
+      document.body.appendChild(form);
+      form.submit();
+    });
+
+    // Verificar con ping que llegó
+    await new Promise(r => setTimeout(r, 2000));
+    const ping = await gasJSONP(GAS_URL + '?action=ping');
+    if(ping && ping.status === 'ok') {
+      _lastRemoteSave = Date.now();
+      localStorage.setItem('on_last_remote_save', String(_lastRemoteSave));
+      _pendingSync = false;
+      setSyncStatus('ok');
+      console.log('[ObraNord Sheets] ✅ Guardado OK (chunked)');
+      return true;
+    }
+    throw new Error('ping falló tras chunked save');
+  } catch(e) {
+    setSyncStatus('local');
+    _pendingSync = true;
+    console.warn('[ObraNord Sheets] saveToSheetsChunked falló:', e.message);
     return false;
   }
 }
@@ -8292,8 +8358,14 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    var raw = (e.postData && e.postData.contents) ? e.postData.contents : '{}';
-    var body = JSON.parse(raw);
+    var body;
+    // Form submit (iframe): el payload viene en e.parameter.payload
+    if (e.parameter && e.parameter.payload) {
+      body = JSON.parse(e.parameter.payload);
+    } else {
+      var raw = (e.postData && e.postData.contents) ? e.postData.contents : '{}';
+      body = JSON.parse(raw);
+    }
     var postAct = body.action || '';
     if (postAct === 'save')  return respond(handleSave(body));
     if (postAct === 'audit') return respond(handleAudit(body.entry));
