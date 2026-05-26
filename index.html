@@ -4410,6 +4410,17 @@ function renderClientes() {
   const q=(document.getElementById('cli-search')?.value||'').toLowerCase();
   let list=clientes.filter(c=>!q||c.nombre.toLowerCase().includes(q)||(c.nif||'').toLowerCase().includes(q)||(c.ciudad||'').toLowerCase().includes(q));
   const tbody=document.getElementById('cli-tbody'); if(!tbody) return;
+  // Event delegation — se registra una sola vez
+  if(!tbody._delegated) {
+    tbody._delegated = true;
+    tbody.addEventListener('click', function(e) {
+      const btn = e.target.closest('[data-action]');
+      if(!btn) return;
+      const id = btn.getAttribute('data-id');
+      if(btn.getAttribute('data-action') === 'edit-cli') openClienteModal(id);
+      if(btn.getAttribute('data-action') === 'del-cli')  deleteCliente(id);
+    });
+  }
   if(!list.length){
     tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--slate)">Sin clientes. Haz clic en "+ Nuevo cliente".</td></tr>';
     return;
@@ -4426,8 +4437,8 @@ function renderClientes() {
       <td><strong>${facturado>0?'€'+facturado.toFixed(2):'—'}</strong></td>
       <td><span class="badge bgry">${ndocs}</span></td>
       <td style="white-space:nowrap">
-        <button class="btn btn-o btn-s" style="padding:4px 8px" onclick=\"openClienteModal('\${c.id}')\">✏️</button>
-        <button class="btn btn-s" style="padding:4px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer;margin-left:3px" onclick=\"deleteCliente('\${c.id}')\">🗑</button>
+        <button class="btn btn-o btn-s" style="padding:4px 8px" data-action="edit-cli" data-id="${c.id}">✏️</button>
+        <button class="btn btn-s" style="padding:4px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer;margin-left:3px" data-action="del-cli" data-id="${c.id}">🗑</button>
       </td>
     </tr>`;
   }).join('');
