@@ -1658,7 +1658,7 @@ td.m{color:var(--slate);font-size:12px}
       <table>
         <thead><tr>
           <th>Nº OT</th><th>Proyecto</th><th>Proveedor</th><th>Descripción</th>
-          <th>Coste prov.</th><th>Precio cliente</th><th>Margen</th>
+          <th>Coste prov.</th><th>Precio cliente</th><th>Margen OT</th><th>Beneficio real</th>
           <th>Estado</th><th>Pago prov.</th><th>Fecha</th><th style="width:80px">Acc.</th>
         </tr></thead>
         <tbody id="ot-tbody"></tbody>
@@ -1800,9 +1800,41 @@ td.m{color:var(--slate);font-size:12px}
         <div class="fgrp"><label class="flbl">Fecha fin estimada</label><input id="proy-fin" class="fc" type="date"></div>
         <div class="fgrp"><label class="flbl">Importe presupuestado (€)</label><input id="proy-importe-pres" class="fc" type="number" step="0.01" min="0" value="0"></div>
         <div class="fgrp"><label class="flbl">Importe facturado (€)</label><input id="proy-importe-fac" class="fc" type="number" step="0.01" min="0" value="0"></div>
-        <div class="fgrp"><label class="flbl">Ref. presupuesto</label><input id="proy-pres-ref" class="fc" placeholder="PRE-2026-001"></div>
-        <div class="fgrp"><label class="flbl">Ref. factura</label><input id="proy-fac-ref" class="fc" placeholder="FAC-2026-001"></div>
+        <div class="fgrp"><label class="flbl">Ref. presupuesto</label>
+          <select id="proy-pres-ref" class="fc" onchange="updatePresRefImporte()">
+            <option value="">— Sin presupuesto vinculado —</option>
+          </select>
+          <div id="proy-pres-ref-importe" style="font-size:11px;color:var(--gold);margin-top:3px;font-weight:700"></div>
+        </div>
+        <div class="fgrp"><label class="flbl">Ref. factura</label>
+          <select id="proy-fac-ref" class="fc" onchange="updateFacRefImporte()">
+            <option value="">— Sin factura vinculada —</option>
+          </select>
+          <div id="proy-fac-ref-importe" style="font-size:11px;color:var(--ok);margin-top:3px;font-weight:700"></div>
+        </div>
         <div class="fgrp" style="grid-column:1/-1"><label class="flbl">Notas</label><textarea id="proy-notas" class="fc" style="min-height:60px"></textarea></div>
+      </div>
+
+      <!-- SECCIÓN FACTURACIÓN DIVIDIDA -->
+      <div style="margin-top:18px;padding:16px;background:var(--cream);border-radius:10px;border:1.5px solid var(--g200)" id="seccion-cofin">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--dark);display:flex;align-items:center;gap:8px">
+            🤝 Facturación dividida
+            <span style="font-size:10px;font-weight:400;color:var(--slate)">Varios clientes comparten el coste</span>
+          </div>
+          <button type="button" class="btn btn-o btn-s" onclick="addCofinanciador()" style="padding:4px 12px;font-size:11px">+ Añadir cliente</button>
+        </div>
+        <div id="cofin-list" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div id="cofin-total-bar" style="margin-top:10px;display:none">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--slate);margin-bottom:4px">
+            <span>Reparto total</span>
+            <span id="cofin-pct-label">0%</span>
+          </div>
+          <div style="height:6px;border-radius:4px;background:var(--g200);overflow:hidden">
+            <div id="cofin-pct-bar" style="height:100%;border-radius:4px;background:var(--gold);transition:.3s;width:0%"></div>
+          </div>
+          <div id="cofin-pct-warn" style="font-size:10px;color:var(--err);margin-top:4px;display:none">⚠️ Los porcentajes deben sumar 100%</div>
+        </div>
       </div>
 
       <!-- SECCIÓN IMÁGENES / PORTFOLIO -->
@@ -1837,9 +1869,12 @@ td.m{color:var(--slate);font-size:12px}
       </div>
 
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid var(--g200)">
-        <div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-o btn-s" id="btn-generar-memoria" onclick="generarPortfolioProyecto(document.getElementById('proy-edit-id').value)" style="display:none">
-            📄 Generar Memoria PDF
+            📄 Memoria PDF
+          </button>
+          <button class="btn btn-o btn-s" id="btn-generar-facs-div" onclick="generarFacturasDivididas(document.getElementById('proy-edit-id').value)" style="display:none;background:var(--gold);color:#fff;border-color:var(--gold)">
+            🧾 Generar facturas divididas
           </button>
         </div>
         <div style="display:flex;gap:10px">
@@ -3197,6 +3232,17 @@ function renderGastos() {
   const estadoColors={Pagado:'bsuc',Pendiente:'bwrn',Anulado:'berr'};
   const tbody=document.getElementById('gastos-tbody');
   if(!tbody) return;
+  if(!tbody._delegated) {
+    tbody._delegated = true;
+    tbody.addEventListener('click', function(e) {
+      const btn = e.target.closest('[data-action]');
+      if(!btn) return;
+      const id = btn.getAttribute('data-id');
+      const action = btn.getAttribute('data-action');
+      if(action==='edit-gasto') openGastoModal(id);
+      if(action==='del-gasto')  deleteGasto(id);
+    });
+  }
   tbody.innerHTML=list.length ? list.map(g=>`
     <tr>
       <td>${g.fecha ? g.fecha.split('-').reverse().join('/') : '—'}</td>
@@ -3213,8 +3259,8 @@ function renderGastos() {
       <td><span class="badge ${estadoColors[g.estado]||'bgry'}">${g.estado}</span></td>
       <td class="m">${g.proyCod?'<span class="badge bgry" style="font-size:10px">'+g.proyCod+'</span>':'—'}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-o btn-s" style="padding:4px 8px" onclick=\"openGastoModal('\${g.id}')\">✏️</button>
-        <button class="btn btn-s" style="padding:4px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer;margin-left:3px" onclick=\"deleteGasto('\${g.id}')\">🗑</button>
+        <button class="btn btn-o btn-s" style="padding:4px 8px" data-action="edit-gasto" data-id="${g.id}">✏️</button>
+        <button class="btn btn-s" style="padding:4px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer;margin-left:3px" data-action="del-gasto" data-id="${g.id}">🗑</button>
       </td>
     </tr>`).join('') : '<tr><td colspan="12" style="text-align:center;padding:30px;color:var(--slate)">Sin gastos registrados. Haz clic en "+ Registrar gasto".</td></tr>';
   updateGastosKPIs();
@@ -3543,6 +3589,26 @@ let historyFilter='todos', historyQuery='';
 
 function renderHistory() {
   const list=document.getElementById('history-list');
+  if(list && !list._delegated) {
+    list._delegated = true;
+    list.addEventListener('click', function(e) {
+      const btn = e.target.closest('[data-action]');
+      if(!btn) return;
+      const id = btn.getAttribute('data-id');
+      const action = btn.getAttribute('data-action');
+      if(action==='ver-doc')     verDetalleDoc(id);
+      if(action==='pago-fac')    openPagoFacModal(id);
+      if(action==='to-factura')  convertirProformaAFactura(id);
+      if(action==='edit-doc') {
+        const doc = documents.find(d=>String(d.id)===String(id));
+        if(!doc) { showToast('Documento no encontrado','er'); return; }
+        if(doc.type==='presupuesto') editarPresupuestoDesdeHistorial(id);
+        else editarFacturaDesdeHistorial(id);
+      }
+      if(action==='del-pres') borrarDocHistorial(id,'presupuesto');
+      if(action==='del-fac')  confirmarBorrarFactura(id);
+    });
+  }
   let filtered=documents;
   if(historyFilter!=='todos') filtered=filtered.filter(d=>d.type===historyFilter);
   if(historyQuery) filtered=filtered.filter(d=>(d.cliente||'').toLowerCase().includes(historyQuery)||(d.num||'').toLowerCase().includes(historyQuery));
@@ -3563,44 +3629,49 @@ function renderHistory() {
     const map={'Aprobado':'bsuc','Rechazado':'berr','En curso':'bblu','Cobrado':'bsuc','Parcialmente cobrado':'bwrn','Pendiente de cobro':'berr'};
     return e?`<span class="badge ${map[e]||'bgry'}">${e}</span>`:'';
   };
-  // Render as table for richer info
-  list.innerHTML=`<div class="tw"><table><thead><tr><th>Tipo</th><th>Número</th><th>Cliente</th><th>Fecha</th><th>Base</th><th>IVA</th><th>Total</th><th>Estado</th><th>Medio pago</th><th style="width:110px"></th></tr></thead><tbody>`+
-    filtered.map(d=>{
-      const base=d.sub!=null?d.sub.toFixed(2):d.total?(d.total/1.21).toFixed(2):'0.00';
-      const iva=d.iva!=null?d.iva.toFixed(2):d.total?(d.total-d.total/1.21).toFixed(2):'0.00';
-      const estadoOpts=['Aprobado','Rechazado','En curso','Cobrado','Parcialmente cobrado','Pendiente de cobro'].map(o=>`<option${(d.estado||'')=== o?' selected':''}>${o}</option>`).join('');
-      const tipoDisplay = tipoLabel[d.type]||d.type||'—';
-      const tipoBadgeClass = d.type==='factura'?'bsuc':d.type==='rectificativa'?'berr':d.type==='proforma'?'bwrn':d.type==='orden'?'bgry':'bblu';
-      // For OTs: link to Pago a Proveedores section
-      const tipoCell = d.type==='orden'
-        ? `<span class="badge ${tipoBadgeClass}" style="cursor:pointer" onclick="showSec('ordenes')" title="Ver en Pago a Proveedores">${icons[d.type]||'📄'} ${escapeHtml(tipoDisplay)} ↗</span>`
-        : `<span class="badge ${tipoBadgeClass}">${icons[d.type]||'📄'} ${escapeHtml(tipoDisplay)}</span>`;
-      // Edit/delete buttons for presupuestos, facturas, proformas, rectificativas
-      const editDeleteBtns = (d.type==='presupuesto')
-        ? `<button class="btn btn-o btn-s" style="padding:4px 8px" onclick=\"editarPresupuestoDesdeHistorial('\${d.id}')\" title="Editar">✏️</button>
-           <button class="btn btn-s" style="padding:4px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer" onclick=\"borrarDocHistorial('\${d.id}','presupuesto')\" title="Eliminar">🗑</button>`
-        : (d.type==='factura'||d.type==='proforma'||d.type==='rectificativa')
-          ? `<button class="btn btn-o btn-s" style="padding:4px 8px" onclick=\"editarFacturaDesdeHistorial('\${d.id}')\" title="Editar">✏️</button>
-             <button class="btn btn-s" style="padding:4px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer" onclick=\"confirmarBorrarFactura('\${d.id}')\" title="Anular">🗑</button>`
-          : '';
-      return `<tr>
-        <td>${tipoCell}</td>
-        <td><strong>${d.num}</strong>${d.type==='proforma'?'<br><span style="font-size:9px;color:var(--warn);font-weight:700">SIN VALOR FISCAL</span>':''}${d.type==='rectificativa'&&d.rectificaRef?'<br><span style="font-size:9px;color:var(--slate)">Rectifica: '+d.rectificaRef+'</span>':''}</td>
-        <td>${d.cliente||'—'}</td>
-        <td class="m">${d.fecha||'—'}</td>
-        <td>€${base}</td><td class="m">€${iva}</td>
-        <td><strong style="color:${d.type==='rectificativa'?'var(--err)':'inherit'}">€${d.total>0?d.total.toFixed(2):'0.00'}</strong></td>
-        <td><select class="fc" style="padding:4px 8px;font-size:11px;min-width:130px" onchange="updateDocEstado(${d.id},this.value)">${estadoOpts}</select></td>
-        <td class="m">${d.medioPago||'—'}</td>
-        <td style="white-space:nowrap;display:flex;gap:3px;flex-wrap:wrap">
-          <button class="btn btn-o btn-s" style="padding:4px 8px" onclick=\"verDetalleDoc('\${d.id}')\" title="Ver detalle">🔍</button>
-          ${d.type==='factura'||d.type==='proforma'?`<button class="btn btn-o btn-s" style="padding:4px 8px" onclick=\"openPagoFacModal('\${d.id}')\" title="Registrar pago">💳</button>`:''}
-          ${d.type==='proforma'?`<button class="btn btn-g btn-s" style="padding:4px 8px" onclick=\"convertirProformaAFactura('\${d.id}')\" title="Convertir a factura real">🧾 →FAC</button>`:''}
-          ${editDeleteBtns}
-        </td>
-      </tr>`;
-    }).join('')+
-    `</tbody></table></div>`;
+  // Render as table
+  var tableHeader = '<div class="tw"><table><thead><tr><th>Tipo</th><th>Número</th><th>Cliente</th><th>Fecha</th><th>Base</th><th>IVA</th><th>Total</th><th>Estado</th><th>Pago</th><th></th></tr></thead><tbody>';
+  var tableRows = filtered.map(function(d) {
+    var base = d.sub!=null ? d.sub.toFixed(2) : d.total ? (d.total/1.21).toFixed(2) : '0.00';
+    var iva  = d.iva!=null ? d.iva.toFixed(2)  : d.total ? (d.total-d.total/1.21).toFixed(2) : '0.00';
+    var estadoOpts = ['Aprobado','Rechazado','En curso','Cobrado','Parcialmente cobrado','Pendiente de cobro','Pendiente de aprobación','Cancelado']
+      .map(function(o){ return '<option value="'+o+'"'+(d.estado===o?' selected':'')+'>'+o+'</option>'; }).join('');
+    var tipoLabel2 = {presupuesto:'Presupuesto',factura:'Factura',proforma:'Proforma',rectificativa:'Rectificativa',orden:'OT'}[d.type]||d.type||'—';
+    var tipoBadge  = {factura:'bsuc',rectificativa:'berr',proforma:'bwrn',presupuesto:'bblu',orden:'bwrn'}[d.type]||'bgry';
+    var tipoCell   = d.type==='orden'
+      ? '<span class="badge '+tipoBadge+'" style="cursor:pointer" onclick="showSec(\'ordenes\')" title="Ver OTs">🔧 '+escapeHtml(tipoLabel2)+'</span>'
+      : '<span class="badge '+tipoBadge+'">'+({presupuesto:'📋',factura:'🧾',proforma:'📄',rectificativa:'↩️'}[d.type]||'📄')+' '+escapeHtml(tipoLabel2)+'</span>';
+    var numCell = d.type==='proforma'
+      ? '<strong>'+escapeHtml(d.num||'')+'</strong><br><span style="font-size:9px;color:var(--warn);font-weight:700">SIN VALOR FISCAL</span>'
+      : (d.type==='rectificativa'&&d.rectificaRef)
+        ? '<strong>'+escapeHtml(d.num||'')+'</strong><br><span style="font-size:9px;color:var(--slate)">Rectifica: '+escapeHtml(d.rectificaRef)+'</span>'
+        : '<strong>'+escapeHtml(d.num||'')+'</strong>';
+    var totalColor = d.type==='rectificativa' ? 'var(--err)' : 'inherit';
+    var editDeleteBtns = d.type==='presupuesto'
+      ? '<button class="btn btn-o btn-s" style="padding:4px 8px" data-action="edit-doc" data-id="'+d.id+'" title="Editar">✏️</button><button class="btn btn-s" style="padding:4px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer" data-action="del-pres" data-id="'+d.id+'" title="Eliminar">🗑</button>'
+      : (d.type==='factura'||d.type==='proforma'||d.type==='rectificativa')
+        ? '<button class="btn btn-o btn-s" style="padding:4px 8px" data-action="edit-doc" data-id="'+d.id+'" title="Editar">✏️</button><button class="btn btn-s" style="padding:4px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer" data-action="del-fac" data-id="'+d.id+'" title="Anular">🗑</button>'
+        : '';
+    var pagoBtn = (d.type==='factura'||d.type==='proforma')
+      ? '<button class="btn btn-o btn-s" style="padding:4px 8px" data-action="pago-fac" data-id="'+d.id+'" title="Registrar pago">💳</button>' : '';
+    var toFacBtn = d.type==='proforma'
+      ? '<button class="btn btn-g btn-s" style="padding:4px 8px" data-action="to-factura" data-id="'+d.id+'" title="Convertir a factura real">🧾 →FAC</button>' : '';
+    return '<tr>' +
+      '<td>'+tipoCell+'</td>' +
+      '<td>'+numCell+'</td>' +
+      '<td>'+escapeHtml(d.cliente||'—')+'</td>' +
+      '<td class="m">'+(d.fecha||'—')+'</td>' +
+      '<td>€'+base+'</td><td class="m">€'+iva+'</td>' +
+      '<td><strong style="color:'+totalColor+'">€'+(d.total>0?d.total.toFixed(2):'0.00')+'</strong></td>' +
+      '<td><select class="fc" style="padding:4px 8px;font-size:11px;min-width:130px" data-docid="'+d.id+'" onchange="updateDocEstado(this.dataset.docid,this.value)">'+estadoOpts+'</select></td>' +
+      '<td class="m">'+(d.medioPago||'—')+'</td>' +
+      '<td style="white-space:nowrap;display:flex;gap:3px;flex-wrap:wrap">' +
+        '<button class="btn btn-o btn-s" style="padding:4px 8px" data-action="ver-doc" data-id="'+d.id+'" title="Ver detalle">🔍</button>' +
+        pagoBtn + toFacBtn + editDeleteBtns +
+      '</td>' +
+    '</tr>';
+  }).join('');
+  list.innerHTML = tableHeader + tableRows + '</tbody></table></div>';
 }
 
 function updateDocEstado(id, estado) {
@@ -4463,6 +4534,37 @@ function closeCliDD(){const dd=document.getElementById('proy-cli-dd');if(dd)dd.c
 // ═══════════════════════════════════════════════════════
 // PROYECTOS CRUD
 // ═══════════════════════════════════════════════════════
+function populatePresRefSelect(selectedVal) {
+  const sel = document.getElementById('proy-pres-ref');
+  if(!sel) return;
+  const pres = documents.filter(d=>d.type==='presupuesto');
+  sel.innerHTML = '<option value="">— Sin presupuesto vinculado —</option>' +
+    pres.map(d=>`<option value="${d.num}" ${d.num===selectedVal?'selected':''}>${d.num} · ${d.cliente||'—'} · €${(d.total||0).toFixed(2)}</option>`).join('');
+  updatePresRefImporte();
+}
+function populateFacRefSelect(selectedVal) {
+  const sel = document.getElementById('proy-fac-ref');
+  if(!sel) return;
+  const facts = documents.filter(d=>d.type==='factura'||d.type==='proforma');
+  sel.innerHTML = '<option value="">— Sin factura vinculada —</option>' +
+    facts.map(d=>`<option value="${d.num}" ${d.num===selectedVal?'selected':''}>${d.num} · ${d.cliente||'—'} · €${(d.total||0).toFixed(2)}</option>`).join('');
+  updateFacRefImporte();
+}
+function updatePresRefImporte() {
+  const sel = document.getElementById('proy-pres-ref');
+  const el = document.getElementById('proy-pres-ref-importe');
+  if(!sel||!el) return;
+  const doc = documents.find(d=>d.num===sel.value&&d.type==='presupuesto');
+  el.textContent = doc ? '💰 Total: €'+doc.total.toFixed(2)+' · '+doc.estado : '';
+}
+function updateFacRefImporte() {
+  const sel = document.getElementById('proy-fac-ref');
+  const el = document.getElementById('proy-fac-ref-importe');
+  if(!sel||!el) return;
+  const doc = documents.find(d=>d.num===sel.value&&(d.type==='factura'||d.type==='proforma'));
+  el.textContent = doc ? '✅ Total: €'+doc.total.toFixed(2)+' · '+doc.estado : '';
+}
+
 function openProyectoModal(id) {
   document.getElementById('modal-proyecto').classList.add('open');
   const today=new Date().toISOString().split('T')[0];
@@ -4480,8 +4582,9 @@ function openProyectoModal(id) {
     document.getElementById('proy-fin').value=p.fin||'';
     document.getElementById('proy-importe-pres').value=p.importePres||0;
     document.getElementById('proy-importe-fac').value=p.importeFac||0;
-    document.getElementById('proy-pres-ref').value=p.presRef||'';
-    document.getElementById('proy-fac-ref').value=p.facRef||'';
+    populatePresRefSelect(p.presRef||'');
+    populateFacRefSelect(p.facRef||'');
+    loadCofinanciadoresInModal(p.cofinanciadores||[]);
     document.getElementById('proy-notas').value=p.notas||'';
     // Link Drive
     const driveLinkEl = document.getElementById('proy-drive-link');
@@ -4490,6 +4593,8 @@ function openProyectoModal(id) {
     // Mostrar botón memoria siempre que el proyecto tenga ID
     const btnMem = document.getElementById('btn-generar-memoria');
     if(btnMem) btnMem.style.display = '';
+    const btnDiv = document.getElementById('btn-generar-facs-div');
+    if(btnDiv) btnDiv.style.display = (p.cofinanciadores&&p.cofinanciadores.length>1) ? '' : 'none';
     // Limpiar thumbs locales
     _proyImagenesTemp = [];
     const thumbsEl = document.getElementById('proy-thumbs');
@@ -4504,8 +4609,11 @@ function openProyectoModal(id) {
   } else {
     document.getElementById('modal-proy-title').textContent='Nuevo proyecto';
     document.getElementById('proy-edit-id').value='';
-    ['proy-nombre','proy-cli-input','proy-cli-id','proy-dir','proy-fin','proy-pres-ref','proy-fac-ref','proy-notas','proy-drive-link'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    ['proy-nombre','proy-cli-input','proy-cli-id','proy-dir','proy-fin','proy-notas','proy-drive-link'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    populatePresRefSelect('');
+    populateFacRefSelect('');
     actualizarBtnVerDrive();
+    loadCofinanciadoresInModal([]);
     document.getElementById('proy-codigo').value=genProyCodigo();
     document.getElementById('proy-estado').value='En captación';
     document.getElementById('proy-inicio').value=today;
@@ -4513,6 +4621,205 @@ function openProyectoModal(id) {
     document.getElementById('proy-importe-fac').value=0;
   }
 }
+
+// ═══════════════════════════════════════════════════════
+// FACTURACIÓN DIVIDIDA — COFINANCIADORES
+// ═══════════════════════════════════════════════════════
+
+function addCofinanciador(data) {
+  const list = document.getElementById('cofin-list');
+  if(!list) return;
+  const idx = list.children.length;
+  const div = document.createElement('div');
+  div.className = 'cofin-row';
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 90px 100px 32px;gap:6px;align-items:center;background:#fff;padding:8px;border-radius:8px;border:1px solid var(--g200)';
+  div.innerHTML = `
+    <div class="pdw" style="position:relative">
+      <input class="fc cofin-cli-input" placeholder="Buscar cliente..." autocomplete="off" data-idx="${idx}"
+        oninput="searchCofinDD(this)" onfocus="searchCofinDD(this)" onblur="setTimeout(()=>closeCofinDD(this),200)"
+        value="${data?data.clienteNombre||'':''}">
+      <input type="hidden" class="cofin-cli-id" value="${data?data.clienteId||'':''}">
+      <div class="pdd cofin-dd" style="display:none"></div>
+    </div>
+    <input class="fc cofin-pct" type="number" min="0" max="100" step="0.01" placeholder="%" title="Porcentaje"
+      value="${data?data.pct||'':''}" oninput="recalcCofinImporte(this);updateCofinBar()">
+    <input class="fc cofin-imp" type="number" min="0" step="0.01" placeholder="€ importe" title="Importe fijo"
+      value="${data?data.importeAsignado||'':''}" oninput="recalcCofinPct(this);updateCofinBar()">
+    <button type="button" onclick="this.closest('.cofin-row').remove();updateCofinBar()" style="background:var(--errbg);color:var(--err);border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">×</button>
+  `;
+  list.appendChild(div);
+  updateCofinBar();
+  document.getElementById('cofin-total-bar').style.display = '';
+}
+
+function searchCofinDD(input) {
+  const q = input.value.toLowerCase();
+  const dd = input.parentElement.querySelector('.cofin-dd');
+  if(!dd) return;
+  const matches = clientes.filter(function(c){ return c.nombre.toLowerCase().includes(q)||(c.nif||'').toLowerCase().includes(q); }).slice(0,6);
+  if(!matches.length||!q) { dd.style.display='none'; return; }
+  dd.innerHTML = matches.map(function(c) {
+    var nifHtml = c.nif ? '<br><span style="font-size:10px;color:var(--slate)">' + c.nif + '</span>' : '';
+    var safeId = c.id;
+    var safeNom = (c.nombre||'').replace(/'/g,'&#39;');
+    return '<div class="pdi" onclick="selectCofinCliente(this,\'' + safeId + '\',\'' + safeNom + '\')">' +
+      '<strong>' + escapeHtml(c.nombre) + '</strong>' + nifHtml + '</div>';
+  }).join('');
+  dd.style.display = 'block';
+}
+
+function selectCofinCliente(el, id, nombre) {
+  const row = el.closest('.cofin-row');
+  row.querySelector('.cofin-cli-input').value = nombre;
+  row.querySelector('.cofin-cli-id').value = id;
+  el.closest('.cofin-dd').style.display='none';
+}
+
+function closeCofinDD(input) {
+  const dd = input.parentElement.querySelector('.cofin-dd');
+  if(dd) dd.style.display='none';
+}
+
+function recalcCofinImporte(pctInput) {
+  const row = pctInput.closest('.cofin-row');
+  const impEl = row.querySelector('.cofin-imp');
+  const total = parseFloat(document.getElementById('proy-importe-pres').value)||0;
+  const pct = parseFloat(pctInput.value)||0;
+  if(total>0 && pct>0) impEl.value = (total * pct / 100).toFixed(2);
+}
+
+function recalcCofinPct(impInput) {
+  const row = impInput.closest('.cofin-row');
+  const pctEl = row.querySelector('.cofin-pct');
+  const total = parseFloat(document.getElementById('proy-importe-pres').value)||0;
+  const imp = parseFloat(impInput.value)||0;
+  if(total>0 && imp>0) pctEl.value = (imp / total * 100).toFixed(2);
+}
+
+function updateCofinBar() {
+  const rows = document.querySelectorAll('.cofin-row');
+  const bar = document.getElementById('cofin-total-bar');
+  if(!rows.length) { if(bar) bar.style.display='none'; return; }
+  if(bar) bar.style.display='';
+  const totalPct = Array.from(rows).reduce((s,r)=>s+(parseFloat(r.querySelector('.cofin-pct').value)||0),0);
+  const pctBar = document.getElementById('cofin-pct-bar');
+  const pctLabel = document.getElementById('cofin-pct-label');
+  const pctWarn = document.getElementById('cofin-pct-warn');
+  if(pctBar) pctBar.style.width = Math.min(totalPct,100)+'%';
+  if(pctBar) pctBar.style.background = Math.abs(totalPct-100)<0.1 ? 'var(--ok)' : totalPct>100 ? 'var(--err)' : 'var(--gold)';
+  if(pctLabel) pctLabel.textContent = totalPct.toFixed(1)+'%';
+  if(pctWarn) pctWarn.style.display = (totalPct>0 && Math.abs(totalPct-100)>0.5) ? '' : 'none';
+  // Show/hide btn generar facturas divididas
+  const btn = document.getElementById('btn-generar-facs-div');
+  if(btn) btn.style.display = rows.length>=2 ? '' : 'none';
+}
+
+function getCofinanciadoresFromModal() {
+  const rows = document.querySelectorAll('.cofin-row');
+  if(!rows.length) return [];
+  return Array.from(rows).map(r=>({
+    clienteId:   r.querySelector('.cofin-cli-id').value,
+    clienteNombre: r.querySelector('.cofin-cli-input').value,
+    pct:         parseFloat(r.querySelector('.cofin-pct').value)||0,
+    importeAsignado: parseFloat(r.querySelector('.cofin-imp').value)||0
+  })).filter(x=>x.clienteNombre);
+}
+
+function loadCofinanciadoresInModal(list) {
+  const container = document.getElementById('cofin-list');
+  if(!container) return;
+  container.innerHTML = '';
+  document.getElementById('cofin-total-bar').style.display = list.length ? '' : 'none';
+  list.forEach(c=>addCofinanciador(c));
+}
+
+// ── GENERAR FACTURAS DIVIDIDAS ──────────────────────────────────────
+function generarFacturasDivididas(proyId) {
+  if(!proyId) { showToast('Guarda el proyecto primero','er'); return; }
+  const p = proyectos.find(x=>String(x.id)===String(proyId));
+  if(!p) { showToast('Proyecto no encontrado','er'); return; }
+  const cofins = p.cofinanciadores||[];
+  if(cofins.length < 2) { showToast('Añade al menos 2 cofinanciadores','er'); return; }
+
+  // Validate pct sums to 100
+  const totalPct = cofins.reduce((s,c)=>s+c.pct,0);
+  if(Math.abs(totalPct-100)>0.5) {
+    showToast('Los porcentajes deben sumar 100% (actual: '+totalPct.toFixed(1)+'%)','er');
+    return;
+  }
+
+  const baseTotal = p.importePres || 0;
+  if(!baseTotal) { showToast('El proyecto no tiene importe presupuestado','er'); return; }
+
+  if(!confirm(`¿Generar ${cofins.length} facturas divididas para el proyecto ${p.codigo}?\n\n`+
+    cofins.map(c=>`• ${c.clienteNombre}: ${c.pct}% = €${c.importeAsignado.toFixed(2)}`).join('\n')+
+    '\n\nSe crearán como facturas independientes vinculadas a este proyecto.')) return;
+
+  const fecha = new Date().toISOString().split('T')[0];
+  const ivaPct = 21;
+  const creadas = [];
+
+  cofins.forEach((cofin, i) => {
+    const base = cofin.importeAsignado || (baseTotal * cofin.pct / 100);
+    const iva  = base * ivaPct / 100;
+    const total = base + iva;
+    const cli = clientes.find(c=>c.id===cofin.clienteId);
+
+    // Generate next factura number
+    const facNums = documents.filter(d=>d.type==='factura'&&d.num&&d.num.startsWith('FAC-'))
+      .map(d=>parseInt(d.num.split('-')[2]||'0')).filter(n=>!isNaN(n));
+    const nextN = (Math.max(0,...facNums)+1+i).toString().padStart(3,'0');
+    const year = new Date().getFullYear();
+    const num = `FAC-${year}-${nextN}`;
+
+    const factura = {
+      id: generateId(),
+      type: 'factura',
+      num,
+      fecha,
+      vencimiento: '',
+      cliente: cofin.clienteNombre,
+      clienteId: cofin.clienteId,
+      nifCliente: cli?.nif||'',
+      dirCliente: cli?.dir||'',
+      emailCliente: cli?.email||'',
+      obra: p.nombre,
+      medioPago: 'Transferencia',
+      ivaPct,
+      sub: Math.round(base*100)/100,
+      iva: Math.round(iva*100)/100,
+      total: Math.round(total*100)/100,
+      estado: 'Pendiente de cobro',
+      proyCod: p.codigo,
+      notas: `Factura dividida ${i+1}/${cofins.length} — ${cofin.pct}% del proyecto ${p.codigo}`,
+      lines: [{
+        desc: `Reforma integral: ${p.nombre} (${cofin.pct}% coste)`,
+        qty: 1,
+        price: Math.round(base*100)/100,
+        total: Math.round(base*100)/100
+      }],
+      pagos: [],
+      pagosAnticipo: [],
+      cofinIdx: i,
+      proyCodRef: p.codigo
+    };
+
+    documents.unshift(factura);
+    creadas.push(num);
+
+    // Update project: link first factura as main facRef
+    if(i===0) { p.facRef = num; p.importeFac = baseTotal + baseTotal*ivaPct/100; p.estado='Facturado'; }
+  });
+
+  saveData('gen_facturas_divididas', p.codigo+' — '+creadas.join(', '));
+  closeProyectoModal();
+  renderHistory();
+  renderProyectos();
+  renderFacPendientes();
+  updateDashboard();
+  showToast(`✅ ${creadas.length} facturas generadas: ${creadas.join(', ')}`,'ok');
+}
+
 function closeProyectoModal(){document.getElementById('modal-proyecto').classList.remove('open');}
 
 function saveProyecto() {
@@ -4533,6 +4840,7 @@ function saveProyecto() {
     presRef:document.getElementById('proy-pres-ref').value,
     facRef:document.getElementById('proy-fac-ref').value,
     notas:document.getElementById('proy-notas').value,
+    cofinanciadores: getCofinanciadoresFromModal(),
     // Preservar datos de Drive si existen
     driveLink: document.getElementById('proy-drive-link')?.value.trim()||'',
     driveFolder: editId ? (proyectos.find(x=>String(x.id)===String(editId))?.driveFolder||'') : '',
@@ -4576,7 +4884,7 @@ function deleteProyecto(id) {
   ordenes = ordenes.filter(o=>o.proyCod!==p.codigo);
   gastos = gastos.filter(g=>g.proyCod!==p.codigo);
   proyectos = proyectos.filter(x=>String(x.id)!==String(id));
-  saveData(); renderProyectos(); renderHistory(); renderOrdenes(); renderGastos(); updateDashboard();
+  saveData(); renderProyectos(); renderHistory(); renderOrdenes(); renderGastos(); renderPresPendientes(); renderFacPendientes(); updateDashboard();
   showToast('✅ Proyecto y documentos asociados eliminados');
 }
 
@@ -4615,6 +4923,7 @@ function renderProyectos() {
       <td><span class="badge bgry" style="font-size:10px">${p.codigo||'—'}</span></td>
       <td><strong><span class="${'sem '+semColor[p.estado]}"></span>${p.nombre}</strong>
         ${p.clienteNombre?`<br><span style="font-size:11px;color:var(--slate)">${p.clienteNombre}</span>`:''}
+        ${(p.cofinanciadores&&p.cofinanciadores.length>1)?p.cofinanciadores.map(c=>`<br><span style="font-size:10px;color:var(--gold)">🤝 ${c.clienteNombre} ${c.pct}% €${(c.importeAsignado||0).toFixed(0)}</span>`).join(''):''}
         ${p.presRef?`<br><span style="font-size:10px;color:var(--slate)">PRE: ${p.presRef}</span>`:''}
         ${p.facRef?`<br><span style="font-size:10px;color:var(--gold)">FAC: ${p.facRef}</span>`:''}
       </td>
@@ -4640,6 +4949,7 @@ function renderProyectos() {
         <button class="btn btn-o btn-s" style="padding:4px 8px" onclick="openProyectoModal('${p.id}')">✏️</button>
         <button class="btn btn-s" style="padding:4px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer;margin-left:3px" onclick="deleteProyecto('${p.id}')">🗑</button>
         <button class="btn btn-o btn-s" style="padding:4px 8px;margin-left:3px" title="Generar Memoria PDF de Portfolio" onclick="generarPortfolioProyecto('${p.id}')">📄</button>
+        ${(p.cofinanciadores&&p.cofinanciadores.length>1)?`<button class="btn btn-s" style="padding:4px 8px;margin-left:3px;background:var(--gold);color:#fff;border:none;border-radius:6px;cursor:pointer" title="Generar facturas divididas" onclick="generarFacturasDivididas('${p.id}')">🧾÷</button>`:''}
       </td>
     </tr>`;
   }).join('');
@@ -5692,6 +6002,20 @@ function renderPresPendientes() {
 
   const tbody = document.getElementById('pres-pend-tbody');
   if(!tbody) return;
+  if(!tbody._delegated) {
+    tbody._delegated = true;
+    tbody.addEventListener('click', function(e) {
+      const btn = e.target.closest('[data-action]');
+      if(!btn) return;
+      const id = btn.getAttribute('data-id');
+      const action = btn.getAttribute('data-action');
+      if(action==='pago-pres') registrarPagoPresup(id);
+      if(action==='facturar-pres') enviarAFacturaPendiente(id);
+      if(action==='ver-pres') verDetalleDoc(id);
+      if(action==='edit-pres') editarPresupuestoDesdeHistorial(id);
+      if(action==='del-pres') borrarDocHistorial(id,'presupuesto');
+    });
+  }
   if(!pendientes.length) {
     tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--ok)">✅ Sin presupuestos pendientes</td></tr>';
     return;
@@ -5719,12 +6043,12 @@ function renderPresPendientes() {
       <td><span class="badge ${epInfo.badge}">${epInfo.icon} ${estadoPago}</span></td>
       <td class="m">${d.fecha||'—'}</td>
       <td style="white-space:nowrap;display:flex;gap:3px;flex-wrap:wrap">
-        <button class="btn btn-o btn-s" style="padding:4px 8px" onclick=\"registrarPagoPresup('\${d.id}')\" title="Registrar pago">💳</button>
-        ${estadoPago==='PAGADO'?`<button class="btn btn-g btn-s" style="padding:4px 8px" onclick=\"enviarAFacturaPendiente('\${d.id}')\" title="Crear factura">🧾 Facturar</button>`:''}
-        <button class="btn btn-o btn-s" style="padding:4px 8px" onclick=\"verDetalleDoc('\${d.id}')\" title="Ver detalle">🔍</button>
-        <button class="btn btn-o btn-s" style="padding:4px 8px" onclick=\"editarPresupuestoDesdeHistorial('\${d.id}')\" title="Editar presupuesto">✏️</button>
-        <button class="btn btn-s" style="padding:4px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer" onclick=\"borrarDocHistorial('\${d.id}','presupuesto')\" title="Eliminar">🗑</button>
-      </td>
+      <td style="white-space:nowrap;display:flex;gap:3px;flex-wrap:wrap">
+        <button class="btn btn-o btn-s" style="padding:4px 8px" data-action="pago-pres" data-id="${d.id}" title="Registrar pago">💳</button>
+        ${estadoPago==='PAGADO'?'<button class="btn btn-g btn-s" style="padding:4px 8px" data-action="facturar-pres" data-id="'+d.id+'" title="Crear factura">🧾 Facturar</button>':''}
+        <button class="btn btn-o btn-s" style="padding:4px 8px" data-action="ver-pres" data-id="${d.id}" title="Ver detalle">🔍</button>
+        <button class="btn btn-o btn-s" style="padding:4px 8px" data-action="edit-pres" data-id="${d.id}" title="Editar presupuesto">✏️</button>
+        <button class="btn btn-s" style="padding:4px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer" data-action="del-pres" data-id="${d.id}" title="Eliminar">🗑</button>
     </tr>`;
   }).join('');
 }
@@ -5908,6 +6232,8 @@ function guardarFactura() {
   saveToHistory(data);
   saveData('save_factura','Factura '+data.num+' — '+cliente);
   renderFacPendientes();
+  renderProyectos();
+  renderHistory();
   updateDashboard();
   checkAlerts();
   showToast('✅ Factura '+data.num+' guardada en historial','ok');
@@ -6236,28 +6562,12 @@ function guardarPresupuesto() {
     if(numCheck.warn){if(!confirm(numCheck.msg+'\n\n¿Continuar?'))return;}
     else{showToast('⚠️ '+numCheck.msg,'er');return;}
   }
-  // Find or create project
+  // Link to project — autoLinkDocToProject handles creation/update automatically
   const proyCodSel = document.getElementById('p-proyecto')?.value||'';
-  let proj = proyCodSel ? proyectos.find(p=>p.codigo===proyCodSel) : null;
-  if(!proj) {
-    // Auto-create project
-    const newCod=genProyCodigo();
-    proj={
-      id:generateId(),
-      codigo:newCod, nombre:cliente+' — '+data.num,
-      clienteNombre:cliente, clienteId:'', dir:data.obra||'',
-      estado:'Presupuesto', inicio:data.fecha,fin:'',
-      importePres:data.total, importeFac:0,
-      presRef:data.num, facRef:'', notas:'Creado automáticamente'
-    };
-    proyectos.unshift(proj);
-    // Update the select with new code
-    const sel=document.getElementById('p-proyecto');
-    if(sel){const opt=document.createElement('option');opt.value=newCod;opt.textContent=newCod+' · '+proj.nombre;sel.appendChild(opt);sel.value=newCod;}
-    showToast('Proyecto '+newCod+' creado automáticamente','ok');
-  } else {
-    proj.importePres=data.total;
-    proj.presRef=data.num;
+  if(proyCodSel) {
+    const proj = proyectos.find(p=>p.codigo===proyCodSel);
+    if(proj) { proj.importePres=data.total; proj.presRef=data.num; }
+    data.proyCod = proyCodSel;
   }
   // Save to history with anticipo payments
   const version = document.getElementById('p-version')?.value||'v1';
@@ -6278,8 +6588,11 @@ function guardarPresupuesto() {
   saveToHistory(item);
   populateProyectoSelects();
   renderPresPendientes();
+  renderProyectos();
   updateDashboard();
-  showToast('✅ Presupuesto '+data.num+' guardado · Proyecto: '+proj.codigo,'ok');
+  // Find the auto-linked project to show in toast
+  const linkedProj = proyectos.find(p=>p.presRef===data.num);
+  showToast('✅ Presupuesto '+data.num+' guardado'+(linkedProj?' · Proyecto: '+linkedProj.codigo:''),'ok');
 }
 
 
@@ -7253,7 +7566,7 @@ function openOTModal(id) {
   // Populate proveedor select
   const psel = document.getElementById('ot-proveedor');
   if(psel) psel.innerHTML = '<option value="">— Seleccionar proveedor —</option>' +
-    PROVEEDORES.map(p=>`<option value="${p['EMPRESA']||p['NOMBRE']}">${p['CODIGO']?p['CODIGO']+' · ':''} ${p['EMPRESA']||p['NOMBRE']} (${p['RUBRO']||''})</option>`).join('');
+    PROVEEDORES.map(p=>`<option value="${p['NOMBRE SL']||''}"><span>${p['CODIGO PROVEEDOR']?p['CODIGO PROVEEDOR']+' · ':''}</span>${p['NOMBRE SL']||''} (${p['RUBRO']||''})</option>`).join('');
 
   const today = new Date().toISOString().split('T')[0];
   if(id !== undefined) {
@@ -7452,6 +7765,7 @@ function renderOrdenes() {
       <td style="color:var(--err);font-weight:700">€${o.coste.toFixed(2)}</td>
       <td style="color:var(--ok);font-weight:700">€${(o.precioCli||0).toFixed(2)}</td>
       <td style="font-weight:800;color:${margen>=0?'var(--gold)':'var(--err)'}">€${margen.toFixed(2)}</td>
+      <td style="font-weight:800;color:${(()=>{const _p=proyectos.find(p=>p.codigo===o.proyCod||String(p.id)===o.proyCod);const _ots=ordenes.filter(x=>x.proyCod===o.proyCod);const _br=(_p?.importeFac||0)-_ots.reduce((s,x)=>s+(x.coste||0),0);return _br>=0?'var(--ok)':'var(--err)';})()}">${(()=>{const _p=proyectos.find(p=>p.codigo===o.proyCod||String(p.id)===o.proyCod);if(!_p||!_p.importeFac)return'<span style="color:var(--slate);font-size:11px">Sin factura</span>';const _ots=ordenes.filter(x=>x.proyCod===o.proyCod);const _br=(_p.importeFac||0)-_ots.reduce((s,x)=>s+(x.coste||0),0);return'€'+_br.toFixed(2);})()}</td>
       <td><span class="badge ${estadoColor[o.estado]||'bgry'}">${o.estado}</span></td>
       <td>
         ${pagado
@@ -8335,7 +8649,7 @@ const HEADERS = {
   'Presupuestos':    ['ID','Número','Fecha','Validez','Cliente','NIF','Dirección','Email','Obra','Medio pago','IVA %','Base','IVA €','Total','Estado','Proyecto','Notas','Líneas'],
   'Facturas':        ['ID','Número','Fecha','Vencimiento','Cliente','NIF','Dirección','Email','Ref.Presupuesto','Medio pago','IVA %','Base','IVA €','Total','Estado','Pago estado','Proyecto','Notas','Líneas'],
   'Gastos':          ['ID','Fecha','Categoría','Descripción','Proveedor','Cód.Proveedor','Nº Factura','Importe (base)','IVA %','IVA €','IRPF %','Retención','Total','Método','Pagador','Estado','Proyecto','Notas'],
-  'Proyectos':       ['ID','Código','Nombre','Cliente','Dirección','Estado','Presupuesto ref','Factura ref','Importe pres.','Importe fact.','Medio pago','Inicio','Fin','Notas'],
+  'Proyectos':       ['ID','Código','Nombre','Cliente','Dirección','Estado','Presupuesto ref','Factura ref','Importe pres.','Importe fact.','Medio pago','Inicio','Fin','Notas','Cofinanciadores'],
   'Tesorería':       ['ID','Tipo','Fecha','Medio','Concepto','Importe','Estado','Contraparte','Referencia'],
   'Contabilidad':    ['Período','Mes','Año','Facturas emitidas','Facturas cobradas','Gastos pagados','Margen bruto','IVA repercutido','IVA soportado','IVA neto a pagar','Nº facturas','Nº gastos'],
   'Clientes':        ['ID','Código','Nombre','NIF','Email','Teléfono','Dirección','Ciudad','Contacto','Notas','Fecha alta'],
@@ -8465,7 +8779,9 @@ function writeRaw(ss, data, user, ts) {
 function writePresupuestos(ss, documents) {
   const pres = documents.filter(function(d) { return d.type === 'presupuesto'; });
   const sh   = ensureSheet(ss, 'Presupuestos', HEADERS['Presupuestos']);
-  upsertRows(sh, pres, function(d) {
+  clearDataRows(sh);
+  if (!pres.length) return;
+  const rows = pres.map(function(d) {
     return [
       String(d.id || ''),
       d.num || '',
@@ -8487,6 +8803,7 @@ function writePresupuestos(ss, documents) {
       JSON.stringify((d.lines || []).map(function(l) { return l.desc + ' x' + l.qty + ' = €' + l.total; }))
     ];
   });
+  if (rows.length) sh.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
 }
 
 // ── FACTURAS (incluye proforma y rectificativa) ───────────────────────
@@ -8495,7 +8812,9 @@ function writeFacturas(ss, documents) {
     return d.type === 'factura' || d.type === 'proforma' || d.type === 'rectificativa';
   });
   const sh = ensureSheet(ss, 'Facturas', HEADERS['Facturas']);
-  upsertRows(sh, facts, function(d) {
+  clearDataRows(sh);
+  if (!facts.length) return;
+  const rows = facts.map(function(d) {
     const cobrado = (d.pagos || []).reduce(function(s, p) { return s + (p.importe || 0); }, 0);
     const estadoPago = cobrado >= (d.total || 0) ? 'Cobrado'
                      : cobrado > 0               ? 'Parcialmente cobrado'
@@ -8522,12 +8841,15 @@ function writeFacturas(ss, documents) {
       JSON.stringify((d.lines || []).map(function(l) { return l.desc + ' x' + l.qty + ' = €' + l.total; }))
     ];
   });
+  if (rows.length) sh.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
 }
 
 // ── GASTOS ───────────────────────────────────────────────────────────
 function writeGastos(ss, gastos) {
   const sh = ensureSheet(ss, 'Gastos', HEADERS['Gastos']);
-  upsertRows(sh, gastos, function(g) {
+  clearDataRows(sh);
+  if (!gastos || !gastos.length) return;
+  const rows = gastos.map(function(g) {
     const base    = g.importe || 0;
     const ivaPct  = g.ivaPct || 0;
     const ivaEur  = roundN(base * ivaPct / 100);
@@ -8552,12 +8874,15 @@ function writeGastos(ss, gastos) {
       g.notas || ''
     ];
   });
+  if (rows.length) sh.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
 }
 
 // ── PROYECTOS ─────────────────────────────────────────────────────────
 function writeProyectos(ss, proyectos) {
   const sh = ensureSheet(ss, 'Proyectos', HEADERS['Proyectos']);
-  upsertRows(sh, proyectos, function(p) {
+  clearDataRows(sh);
+  if (!proyectos || !proyectos.length) return;
+  const rows = proyectos.map(function(p) {
     return [
       String(p.id || ''),
       p.codigo || '',
@@ -8572,15 +8897,19 @@ function writeProyectos(ss, proyectos) {
       p.medioPago || '',
       p.inicio || '',
       p.fin || '',
-      p.notas || ''
+      p.notas || '',
+      p.cofinanciadores ? p.cofinanciadores.map(function(c){return c.clienteNombre+' '+c.pct+'%';}).join(' | ') : ''
     ];
   });
+  if (rows.length) sh.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
 }
 
 // ── TESORERÍA ─────────────────────────────────────────────────────────
 function writeTesoreria(ss, tesoreria) {
   const sh = ensureSheet(ss, 'Tesorería', HEADERS['Tesorería']);
-  upsertRows(sh, tesoreria, function(t) {
+  clearDataRows(sh);
+  if (!tesoreria || !tesoreria.length) return;
+  const rows = tesoreria.map(function(t) {
     return [
       String(t.id || ''),
       t.tipo || '',
@@ -8593,12 +8922,16 @@ function writeTesoreria(ss, tesoreria) {
       t.ref || ''
     ];
   });
+  if (rows.length) sh.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
 }
 
 // ── CLIENTES ──────────────────────────────────────────────────────────
 function writeClientes(ss, clientes) {
   const sh = ensureSheet(ss, 'Clientes', HEADERS['Clientes']);
-  upsertRows(sh, clientes, function(c) {
+  // clearDataRows + rewrite para que los borrados en el ERP se eliminen también en Sheets
+  clearDataRows(sh);
+  if (!clientes || !clientes.length) return;
+  const rows = clientes.map(function(c) {
     return [
       String(c.id || ''),
       c.codigo || '',
@@ -8613,6 +8946,7 @@ function writeClientes(ss, clientes) {
       c.creado ? c.creado.substring(0, 10) : ''
     ];
   });
+  if (rows.length) sh.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
 }
 
 // ── PROVEEDORES ───────────────────────────────────────────────────────
@@ -9324,11 +9658,11 @@ function renderPinKeypad() {
   const grid = document.getElementById('pin-keypad');
   if(!grid) return;
   const keys = [1,2,3,4,5,6,7,8,9,'',0,'⌫'];
-  grid.innerHTML = keys.map(k=>
-    k===''
+  grid.innerHTML = keys.map(function(k) {
+    return k===''
       ? '<div></div>'
-      : `<button class="btn btn-o" style="justify-content:center;font-size:18px;font-weight:700;padding:14px 0" onclick="pinKey('${k}')">${k}</button>`
-  ).join('');
+      : '<button class="btn btn-o" style="justify-content:center;font-size:18px;font-weight:700;padding:14px 0" onclick="pinKey(\'' + k + '\')">' + k + '</button>';
+  }).join('');
 }
 
 // CSS for pin shake animation
