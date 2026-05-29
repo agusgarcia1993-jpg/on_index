@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ObraNord ERP v12</title>
+<title>ObraNord ERP v2.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
@@ -227,7 +227,7 @@ td.m{color:var(--slate);font-size:12px}
 <div class="topbar">
   <div class="logo">
     <div class="logo-icon">ON</div>
-    <div>ObraNord <div class="logo-sub">ERP · Sistema de Gestión</div></div>
+    <div>ObraNord <div class="logo-sub">ERP v2.0</div></div>
   </div>
   <div class="topbar-right" style="display:flex;align-items:center;gap:10px">
     <span style="font-size:12px;color:var(--slate)" id="save-status"></span>
@@ -2174,7 +2174,7 @@ const PROVEEDORES_SEED = [{"CODIGO PROVEEDOR":"AIR0001","NOMBRE SL":"Juan Santia
 let PROVEEDORES = JSON.parse(localStorage.getItem('on_proveedores')||'null') || PROVEEDORES_SEED;
 
 // ═══════════════════════════════════════════════════════
-// CAPA DE ESTABILIDAD v12 — IDs, Transacciones, Validaciones
+// CAPA DE ESTABILIDAD v2.0 — IDs, Transacciones, Validaciones
 // ═══════════════════════════════════════════════════════
 
 // 1. IDs seguros — reemplaza Date.now() (colisiones posibles)
@@ -2418,7 +2418,7 @@ function setSyncStatus(s) {
 
 function getBackupPayload() {
   return {
-    version: 12,
+    version: 20,
     fecha: new Date().toISOString(),
     gastos, documents, clientes, proyectos,
     tesoreria, objetivos, empresa, tareas, ordenes, eventos,
@@ -3841,9 +3841,49 @@ function savePagoFac() {
   if(!doc.pagos) doc.pagos=[];
   doc.pagos.push({fecha:document.getElementById('pago-fecha').value,importe,medio:document.getElementById('pago-medio').value,notas:document.getElementById('pago-notas').value});
   const totalPagado=doc.pagos.reduce((s,p)=>s+p.importe,0);
-  if(totalPagado>=doc.total) doc.estado='Cobrado';
+  const pendienteRestante = Math.round((doc.total - totalPagado)*100)/100;
+
+  if(totalPagado>=doc.total*0.999) doc.estado='Cobrado';
   else if(totalPagado>0) doc.estado='Parcialmente cobrado';
   else doc.estado='Pendiente de cobro';
+
+  // Si pago parcial → crear automáticamente cobro pendiente por el resto
+  if(pendienteRestante > 0.01) {
+    // Calcular vencimiento sugerido: 30 días desde hoy
+    const hoyDate = new Date();
+    hoyDate.setDate(hoyDate.getDate() + 30);
+    const vencSug = hoyDate.toISOString().split('T')[0];
+
+    // Añadir a tesorería como ingreso pendiente
+    const tPendiente = {
+      id: generateId(),
+      tipo: 'ingreso',
+      fecha: vencSug,
+      medio: document.getElementById('pago-medio').value || doc.medioPago || 'Transferencia',
+      concepto: 'COBRO PENDIENTE — ' + doc.num + ' · ' + (doc.cliente||'') + ' (resto ' + Math.round(pendienteRestante*100)/100 + '€)',
+      importe: pendienteRestante,
+      estado: 'Pendiente',
+      contraparte: doc.cliente||'',
+      ref: doc.num,
+      _autoPendiente: true,
+      _docId: String(doc.id)
+    };
+
+    // Eliminar entradas pendientes anteriores de esta factura para no duplicar
+    tesoreria = tesoreria.filter(function(t) {
+      return !(t._autoPendiente && t._docId === String(doc.id) && t.estado === 'Pendiente');
+    });
+    tesoreria.unshift(tPendiente);
+
+    showToast('Pago parcial registrado · Pendiente: €' + pendienteRestante.toFixed(2) + ' → programado para ' + vencSug + ' ✅', 'ok');
+  } else {
+    // Eliminar cobros pendientes automáticos de esta factura si ya está cobrada
+    tesoreria = tesoreria.filter(function(t) {
+      return !(t._autoPendiente && t._docId === String(doc.id));
+    });
+    showToast('Pago registrado · Estado: '+doc.estado+' ✅','ok');
+  }
+
   // Cascade payment state to linked project
   syncProyectoFromDoc(doc);
   saveData();
@@ -3854,7 +3894,6 @@ function savePagoFac() {
   renderCuentas();
   renderFacPendientes();
   updateDashboard();
-  showToast('Pago registrado · Estado: '+doc.estado+' ✅','ok');
 }
 
 
