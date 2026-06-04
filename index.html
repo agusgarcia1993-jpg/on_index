@@ -398,7 +398,7 @@ td.m{color:var(--slate);font-size:12px}
       <div class="fg fg4">
         <div class="fgrp"><label class="flbl">Nº Presupuesto</label>
           <div style="display:flex;gap:6px;align-items:center">
-            <input id="p-num" class="fc" value="PRE-2026-001" style="flex:1">
+            <input id="p-num" class="fc" placeholder="PRE-2026-001" style="flex:1">
             <select id="p-version" class="fc" style="width:65px" title="Versión del presupuesto">
               <option value="v1">v1</option><option value="v2">v2</option><option value="v3">v3</option>
               <option value="v4">v4</option><option value="v5">v5</option>
@@ -488,7 +488,7 @@ td.m{color:var(--slate);font-size:12px}
     </div>
     <div class="card"><div class="ctitle">🔢 Numeración</div>
       <div class="fg fg4">
-        <div class="fgrp"><label class="flbl">Nº Factura</label><input id="f-num" class="fc" value="FAC-2026-001"></div>
+        <div class="fgrp"><label class="flbl">Nº Factura</label><input id="f-num" class="fc" placeholder="FAC-2026-001"></div>
         <div class="fgrp"><label class="flbl">Fecha emisión</label><input id="f-fecha" class="fc" type="date"></div>
         <div class="fgrp"><label class="flbl">Vencimiento</label><input id="f-vencimiento" class="fc" type="date"></div>
         <div class="fgrp"><label class="flbl">Método de pago</label><select id="f-pago" class="fc"><option>Transferencia bancaria</option><option>Efectivo</option><option>Bizum</option><option>Tarjeta</option></select></div>
@@ -610,7 +610,7 @@ td.m{color:var(--slate);font-size:12px}
     </div>
     <div class="card"><div class="ctitle">🔢 Numeración</div>
       <div class="fg fg3">
-        <div class="fgrp"><label class="flbl">Nº Proforma</label><input id="pf-num" class="fc" value="PRO-2026-001"></div>
+        <div class="fgrp"><label class="flbl">Nº Proforma</label><input id="pf-num" class="fc" placeholder="PRO-2026-001"></div>
         <div class="fgrp"><label class="flbl">Fecha emisión</label><input id="pf-fecha" class="fc" type="date"></div>
         <div class="fgrp"><label class="flbl">Válido hasta</label><input id="pf-validez" class="fc" type="date"></div>
       </div>
@@ -695,7 +695,7 @@ td.m{color:var(--slate);font-size:12px}
     </div>
     <div class="card"><div class="ctitle">🔢 Numeración</div>
       <div class="fg fg3">
-        <div class="fgrp"><label class="flbl">Nº Rectificativa</label><input id="rf-num" class="fc" value="RECT-2026-001"></div>
+        <div class="fgrp"><label class="flbl">Nº Rectificativa</label><input id="rf-num" class="fc" placeholder="RECT-2026-001"></div>
         <div class="fgrp"><label class="flbl">Fecha emisión</label><input id="rf-fecha" class="fc" type="date"></div>
         <div class="fgrp"><label class="flbl">Notas</label><input id="rf-notas" class="fc" placeholder="Explicación adicional..."></div>
       </div>
@@ -2180,7 +2180,37 @@ td.m{color:var(--slate);font-size:12px}
 // DATA
 // ═══════════════════════════════════════════════════════
 const PROVEEDORES_SEED = [{"CODIGO PROVEEDOR":"AIR0001","NOMBRE SL":"Juan Santiago","NIF":"","EMAIL":"","WEB":"","TELEFONO":"619749657","TELEFONO 2":"930004419","DIRECCION":"","RUBRO":"Aire Acondicionado","DESCRIPCION":""},{"CODIGO PROVEEDOR":"AIR0002","NOMBRE SL":"Alcaide","NIF":"","EMAIL":"","WEB":"","TELEFONO":"619040621","TELEFONO 2":"933050382","DIRECCION":"","RUBRO":"Aire Acondicionado","DESCRIPCION":"Calderas"},{"CODIGO PROVEEDOR":"ALU0001","NOMBRE SL":"TECHNAL","NIF":"","EMAIL":"","WEB":"","TELEFONO":"605 983 584","TELEFONO 2":"","DIRECCION":"Camí de Can Ametller, 18, 08195 Sant Cugat del Vallès, Barcelona","RUBRO":"Aluminios","DESCRIPCION":"Manetas / Carpinteria en Aluminio"},{"CODIGO PROVEEDOR":"CAL0001","NOMBRE SL":"Sr Duval","NIF":"","EMAIL":"","WEB":"","TELEFONO":"932523850","TELEFONO 2":"","DIRECCION":"","RUBRO":"Calderas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"CAL0002","NOMBRE SL":"Sin Nombre","NIF":"","EMAIL":"","WEB":"","TELEFONO":"605 498 737","TELEFONO 2":"","DIRECCION":"","RUBRO":"Calderas","DESCRIPCION":"Arreglo Caldera Carrer Espinoi en MSB"},{"CODIGO PROVEEDOR":"CER0001","NOMBRE SL":"Jona","NIF":"","EMAIL":"","WEB":"","TELEFONO":"617873421","TELEFONO 2":"","DIRECCION":"","RUBRO":"Cerrajero","DESCRIPCION":""},{"CODIGO PROVEEDOR":"CER0002","NOMBRE SL":"maldonado.es","NIF":"","EMAIL":"","WEB":"","TELEFONO":"644 720 612","TELEFONO 2":"","DIRECCION":"","RUBRO":"Cerrajero","DESCRIPCION":"Instalador de Cerraduras Electronicas"},{"CODIGO PROVEEDOR":"CER0003","NOMBRE SL":"Jaime Suarez","NIF":"","EMAIL":"","WEB":"","TELEFONO":"619 277 732","TELEFONO 2":"","DIRECCION":"","RUBRO":"Cerrajero","DESCRIPCION":""},{"CODIGO PROVEEDOR":"CER0004","NOMBRE SL":"Barna Copy","NIF":"","EMAIL":"","WEB":"","TELEFONO":"671 100 243","TELEFONO 2":"","DIRECCION":"Carrer de Provença, 190, Eixample, 08036 Barcelona","RUBRO":"Cerrajero","DESCRIPCION":"Cerrajeros 24 horas, no son baratos"},{"CODIGO PROVEEDOR":"CES0001","NOMBRE SL":"Arcon SA","NIF":"","EMAIL":"","WEB":"","TELEFONO":"629117478","TELEFONO 2":"936002002","DIRECCION":"","RUBRO":"Cerraduras Salto","DESCRIPCION":""},{"CODIGO PROVEEDOR":"CSB0001","NOMBRE SL":"Santiago","NIF":"","EMAIL":"","WEB":"","TELEFONO":"646190112","TELEFONO 2":"","DIRECCION":"","RUBRO":"Cerrajero / Soldador / Barandas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"ELE0001","NOMBRE SL":"Castro Porterias","NIF":"","EMAIL":"","WEB":"","TELEFONO":"637879012","TELEFONO 2":"","DIRECCION":"","RUBRO":"Electricista","DESCRIPCION":""},{"CODIGO PROVEEDOR":"FOT0001","NOMBRE SL":"Manuel Medir","NIF":"","EMAIL":"","WEB":"","TELEFONO":"654935587","TELEFONO 2":"","DIRECCION":"","RUBRO":"Fotografía","DESCRIPCION":""},{"CODIGO PROVEEDOR":"FOT0002","NOMBRE SL":"Ismael","NIF":"","EMAIL":"","WEB":"","TELEFONO":"636257214","TELEFONO 2":"","DESCRIPCION":""},{"CODIGO PROVEEDOR":"FOT0003","NOMBRE SL":"Nini","NIF":"","EMAIL":"","WEB":"","TELEFONO":"645052838","TELEFONO 2":"","RUBRO":"Fotografía","DESCRIPCION":""},{"CODIGO PROVEEDOR":"FUM0001","NOMBRE SL":"Fumigaciones Bolboreta","NIF":"","EMAIL":"","WEB":"","TELEFONO":"640 893 107","TELEFONO 2":"","RUBRO":"Fumigaciones","DESCRIPCION":""},{"CODIGO PROVEEDOR":"JAR0001","NOMBRE SL":"Jose","NIF":"","EMAIL":"","WEB":"","TELEFONO":"609 344 758","TELEFONO 2":"","RUBRO":"Jardineria","DESCRIPCION":"Tiene contactos de otros provedores"},{"CODIGO PROVEEDOR":"JAR0002","NOMBRE SL":"Uriel","NIF":"","EMAIL":"","WEB":"","TELEFONO":"617 806 495","TELEFONO 2":"","RUBRO":"Jardineria","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LAB0001","NOMBRE SL":"Marta","NIF":"","EMAIL":"","WEB":"","TELEFONO":"","TELEFONO 2":"933132104","RUBRO":"Lavadoras Balay, Bosch, Siemens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LAM0001","NOMBRE SL":"Jauma","NIF":"","EMAIL":"","WEB":"","TELEFONO":"683635152","TELEFONO 2":"","RUBRO":"Lampista","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LAM0002","NOMBRE SL":"Oriol Mangare","NIF":"","EMAIL":"","WEB":"","TELEFONO":"619161419","TELEFONO 2":"","RUBRO":"Lampista","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LAV0001","NOMBRE SL":"Lavanderia Bugamar","NIF":"","EMAIL":"","WEB":"","TELEFONO":"932310410","TELEFONO 2":"","RUBRO":"Lavanderia","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LAV0002","NOMBRE SL":"Lavanderia Bugamar","NIF":"","EMAIL":"","WEB":"","TELEFONO":"665584767","TELEFONO 2":"","RUBRO":"Lavanderia","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LAV0003","NOMBRE SL":"Lavanderia Bugamar","NIF":"","EMAIL":"","WEB":"","TELEFONO":"638079929","TELEFONO 2":"","RUBRO":"Lavanderia","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LIM0001","NOMBRE SL":"Sofía Ríos (Caterina Limpieza)","NIF":"","EMAIL":"","WEB":"","TELEFONO":"625338626","TELEFONO 2":"","RUBRO":"Limpieza","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LIM0002","NOMBRE SL":"Merceditas","NIF":"","EMAIL":"","WEB":"","TELEFONO":"674109417","TELEFONO 2":"","RUBRO":"Limpieza","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LIM0003","NOMBRE SL":"Georgina","NIF":"","EMAIL":"","WEB":"","TELEFONO":"624399270","TELEFONO 2":"","RUBRO":"Limpieza","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LIT0001","NOMBRE SL":"Eduard","NIF":"","EMAIL":"","WEB":"","TELEFONO":"658775370","TELEFONO 2":"","RUBRO":"Limpieza Tapizados","DESCRIPCION":"Limpieza silla 20 €, limpieza sofá 100 €"},{"CODIGO PROVEEDOR":"MAC0001","NOMBRE SL":"Edgar Zamorano","NIF":"","EMAIL":"","WEB":"","TELEFONO":"686197758","TELEFONO 2":"","RUBRO":"Mantenimiento Gral / Cerrajero","DESCRIPCION":""},{"CODIGO PROVEEDOR":"MAE0001","NOMBRE SL":"Fluorescencia i Electricidat","NIF":"","EMAIL":"juliandsg@fluorescencia.cat","WEB":"","TELEFONO":"932008124","TELEFONO 2":"","RUBRO":"Materiales Electricos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"MAG0001","NOMBRE SL":"Luis","NIF":"","EMAIL":"","WEB":"","TELEFONO":"667858280","TELEFONO 2":"","RUBRO":"Mantenimiento Gral","DESCRIPCION":""},{"CODIGO PROVEEDOR":"MAG0002","NOMBRE SL":"Paty (Luis)","NIF":"","EMAIL":"","WEB":"","TELEFONO":"613 325 027","TELEFONO 2":"","RUBRO":"Mantenimiento Gral","DESCRIPCION":"Llamar cuando Luis no atiende"},{"CODIGO PROVEEDOR":"MAG0003","NOMBRE SL":"David Utrera","NIF":"","EMAIL":"","WEB":"","TELEFONO":"667 256 171","TELEFONO 2":"","RUBRO":"Mantenimiento Gral","DESCRIPCION":""},{"CODIGO PROVEEDOR":"MAG0004","NOMBRE SL":"Alex","NIF":"","EMAIL":"","WEB":"","TELEFONO":"683 653 916","TELEFONO 2":"632 947 444","RUBRO":"Mantenimiento Gral","DESCRIPCION":""},{"CODIGO PROVEEDOR":"MAM0001","NOMBRE SL":"GINO","NIF":"","EMAIL":"","WEB":"","TELEFONO":"","TELEFONO 2":"","RUBRO":"Mamparas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"MAN0001","NOMBRE SL":"Alexis","NIF":"","EMAIL":"","WEB":"","TELEFONO":"600255466","TELEFONO 2":"","RUBRO":"Manitas","DESCRIPCION":"25 €/hora aprox / Montaje muebles"},{"CODIGO PROVEEDOR":"MAT0001","NOMBRE SL":"Sanitarios Bosco","NIF":"","EMAIL":"alejandro@sanitariosbosco.es","WEB":"","TELEFONO":"934150864","TELEFONO 2":"","RUBRO":"Materiales Construccion","DESCRIPCION":"Materiales Sanitarios / baños / mamparas"},{"CODIGO PROVEEDOR":"MAT0002","NOMBRE SL":"Siesmo","NIF":"","EMAIL":"","WEB":"","TELEFONO":"666411598","TELEFONO 2":"932036916","RUBRO":"Materiales Construccion","DESCRIPCION":""},{"CODIGO PROVEEDOR":"MDC0001","NOMBRE SL":"Krion","NIF":"","EMAIL":"","WEB":"","TELEFONO":"660 389 521","TELEFONO 2":"","RUBRO":"Materiales de Construccion","DESCRIPCION":"Mamparas / Encimeras / Platos de Ducha"},{"CODIGO PROVEEDOR":"NEV0001","NOMBRE SL":"Frankee SL-","NIF":"","EMAIL":"","WEB":"","TELEFONO":"629556042","TELEFONO 2":"","RUBRO":"Venta de electrodomesticos.","DESCRIPCION":"Empresa Neveras, Lavavajillas, Campanas"},{"CODIGO PROVEEDOR":"OPE0001","NOMBRE SL":"Alcaide","NIF":"","EMAIL":"","WEB":"","TELEFONO":"665985058","TELEFONO 2":"","RUBRO":"Operario","DESCRIPCION":"de Alcaide Empresa"},{"CODIGO PROVEEDOR":"PAL0001","NOMBRE SL":"Genis","NIF":"","EMAIL":"","WEB":"","TELEFONO":"668 852 322","TELEFONO 2":"","RUBRO":"Paleta","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PER0001","NOMBRE SL":"Toni","NIF":"","EMAIL":"","WEB":"","TELEFONO":"654805033","TELEFONO 2":"","RUBRO":"Persianas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PER0002","NOMBRE SL":"Gradhermetic","NIF":"","EMAIL":"jartacho@gradhermetic.es","WEB":"","TELEFONO":"619712060","TELEFONO 2":"689213773","RUBRO":"Persianas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PER0003","NOMBRE SL":"Gradhermetic","NIF":"","EMAIL":"","WEB":"","TELEFONO":"659027111","TELEFONO 2":"","RUBRO":"Persianas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PER0004","NOMBRE SL":"Persiana Berlines","NIF":"","EMAIL":"","WEB":"","TELEFONO":"639366002","TELEFONO 2":"934172365","RUBRO":"Persianas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PER0005","NOMBRE SL":"Linda Persianas","NIF":"","EMAIL":"","WEB":"","TELEFONO":"934173855","TELEFONO 2":"","RUBRO":"Persianas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0001","NOMBRE SL":"Raul Barriendos","NIF":"","EMAIL":"","WEB":"","TELEFONO":"654095718","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0002","NOMBRE SL":"Cortinas Vallès","NIF":"","EMAIL":"info@cortinasvalles.com","WEB":"https://cortinasvalles.com/","TELEFONO":"619 51 42 90","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0003","NOMBRE SL":"Arandes","NIF":"","EMAIL":"comercial@arandes.es","WEB":"https://www.arandes.es/","TELEFONO":"93 457 12 46","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":"No instalan ni hacen desplazamientos"},{"CODIGO PROVEEDOR":"PES0004","NOMBRE SL":"Montajes y Diseños Marcos S.L.","NIF":"","EMAIL":"myd@infonegocio.com","WEB":"","TELEFONO":"932 45 93 59","TELEFONO 2":"605 988 747","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0005","NOMBRE SL":"La Finestra Cortines a Mida","NIF":"","EMAIL":"ventas@lafinestra-barcelona.com","WEB":"","TELEFONO":"934 51 51 68","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0006","NOMBRE SL":"Persianasamedida.com","NIF":"","EMAIL":"presupuestos@persianasamedida.com","WEB":"","TELEFONO":"932 98 96 76","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0007","NOMBRE SL":"Persi-Decor, S.C.P.","NIF":"","EMAIL":"central@persidecor.net","WEB":"","TELEFONO":"933 14 17 57","TELEFONO 2":"650 32 00 96","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0008","NOMBRE SL":"Persianas Almar","NIF":"","EMAIL":"info@persialmar.es","WEB":"","TELEFONO":"671 127 258","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0009","NOMBRE SL":"Persianas SeguriPro Barcelona","NIF":"","EMAIL":"","WEB":"","TELEFONO":"610320322","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0010","NOMBRE SL":"Persianas GAMAR","NIF":"","EMAIL":"","WEB":"","TELEFONO":"618 50 70 53","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0011","NOMBRE SL":"Reparación e Instalación Soluciones Persianas","NIF":"","EMAIL":"","WEB":"","TELEFONO":"657 36 19 32","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0012","NOMBRE SL":"Alumidina carpintería de aluminio y pvc","NIF":"","EMAIL":"","WEB":"","TELEFONO":"601496453","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0013","NOMBRE SL":"Persianasweb","NIF":"","EMAIL":"","WEB":"","TELEFONO":"687 56 79 33","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0014","NOMBRE SL":"Persianas Tosa","NIF":"","EMAIL":"info@persianastosa.com","WEB":"","TELEFONO":"626 25 78 51","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0015","NOMBRE SL":"Toldos & Persianas ORÚS e Hijos","NIF":"","EMAIL":"orus@toldospersianasorus.com","WEB":"","TELEFONO":"629 79 01 95","TELEFONO 2":"696844917","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0016","NOMBRE SL":"Persianas Raúl","NIF":"","EMAIL":"","WEB":"","TELEFONO":"653 99 07 55","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":"No hacen Screens / Solo persianas"},{"CODIGO PROVEEDOR":"PES0017","NOMBRE SL":"Cortina Tecnica","NIF":"","EMAIL":"info@cortinatecnica.com","WEB":"","TELEFONO":"649 912 182","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0018","NOMBRE SL":"Cortitecnic","NIF":"","EMAIL":"info@cortitecnic.com","WEB":"","TELEFONO":"623249964","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0019","NOMBRE SL":"kcontrolsolar","NIF":"","EMAIL":"","WEB":"","TELEFONO":"617 08 17 17","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PIN0001","NOMBRE SL":"Igor","NIF":"","EMAIL":"","WEB":"","TELEFONO":"602 412 137","TELEFONO 2":"","RUBRO":"Pintor","DESCRIPCION":"Pintor de Copiba"},{"CODIGO PROVEEDOR":"PIN0002","NOMBRE SL":"Andrés","NIF":"","EMAIL":"","WEB":"","TELEFONO":"691295209","TELEFONO 2":"","RUBRO":"Pintor","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PLA0001","NOMBRE SL":"Lasha","NIF":"","EMAIL":"","WEB":"","TELEFONO":"631067651","TELEFONO 2":"","RUBRO":"Pladurista","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PST0001","NOMBRE SL":"Toldos Clot","NIF":"","EMAIL":"","WEB":"https://www.toldosclot.com/","TELEFONO":"932 319 302","TELEFONO 2":"","RUBRO":"Persianas / Screens / Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"SOL0001","NOMBRE SL":"Jason Cerrajeria","NIF":"","EMAIL":"","WEB":"","TELEFONO":"615705001","TELEFONO 2":"","RUBRO":"Soldador","DESCRIPCION":"Acero"},{"CODIGO PROVEEDOR":"SOL0002","NOMBRE SL":"Soldador M&J","NIF":"","EMAIL":"","WEB":"","TELEFONO":"667795376","TELEFONO 2":"","RUBRO":"Soldador","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0001","NOMBRE SL":"Catalana de Toldos","NIF":"","EMAIL":"info@catalanadetoldos.cat","WEB":"https://catalanadetoldos.cat/","TELEFONO":"933 256 970","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0002","NOMBRE SL":"Toldos y Cortinas Barcelona S.L.","NIF":"","EMAIL":"info@toldosycortinasbarcelona.com","WEB":"","TELEFONO":"930136312","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0003","NOMBRE SL":"TENDALS TÈCNICS","NIF":"","EMAIL":"comercial@tendalstecnics.com","WEB":"","TELEFONO":"660 389 323","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0004","NOMBRE SL":"Toldos Fibratol S.C.P.","NIF":"","EMAIL":"","WEB":"","TELEFONO":"933 251 670","TELEFONO 2":"661 922 172","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0005","NOMBRE SL":"Toldos Barcino","NIF":"","EMAIL":"","WEB":"","TELEFONO":"933 257 115","TELEFONO 2":"697 532 143","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0006","NOMBRE SL":"Toldos Glorias","NIF":"","EMAIL":"info@toldosglorias.com","WEB":"","TELEFONO":"933145024","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0007","NOMBRE SL":"Tolditec | Toldos Barcelona","NIF":"","EMAIL":"","WEB":"","TELEFONO":"935 959 859","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0008","NOMBRE SL":"Toldos Barcelona","NIF":"","EMAIL":"info@toldos-barcelona.es","WEB":"","TELEFONO":"931 935 055","TELEFONO 2":"615 797 721","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0009","NOMBRE SL":"Toldos Ros","NIF":"","EMAIL":"comercial@toldosros.com","WEB":"","TELEFONO":"934 551 353","TELEFONO 2":"628 310 054","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0010","NOMBRE SL":"Toldos Maragall","NIF":"","EMAIL":"info@toldosmaragall.com","WEB":"","TELEFONO":"934201755","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0011","NOMBRE SL":"Toldos Clot","NIF":"","EMAIL":"","WEB":"","TELEFONO":"932 319 302","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0012","NOMBRE SL":"Toldos Toldex","NIF":"","EMAIL":"info@toldostoldex.es","WEB":"","TELEFONO":"936 94 05 68","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"VEN0001","NOMBRE SL":"CEMEVISA","NIF":"","EMAIL":"","WEB":"","TELEFONO":"669819463","TELEFONO 2":"","RUBRO":"Venta de electrodomesticos.","DESCRIPCION":""},{"CODIGO PROVEEDOR":"VID0001","NOMBRE SL":"Pintor","NIF":"","EMAIL":"","WEB":"","TELEFONO":"637807902","TELEFONO 2":"","RUBRO":"Vidrios y Complementos","DESCRIPCION":""}];
-let PROVEEDORES = JSON.parse(localStorage.getItem('on_proveedores')||'null') || PROVEEDORES_SEED;
+let PROVEEDORES = (function() {
+  var stored = JSON.parse(localStorage.getItem('on_proveedores')||'null');
+  var base = stored || PROVEEDORES_SEED;
+  // Merge: for each SEED entry, if not in stored, add it
+  // This restores codes lost when localStorage had old format
+  if(stored && stored.length > 0) {
+    // Normalize all entries: ensure CODIGO PROVEEDOR comes from any alias
+    base = stored.map(function(p) {
+      if(!p['CODIGO PROVEEDOR'] && p['CODIGO']) p['CODIGO PROVEEDOR'] = p['CODIGO'];
+      if(!p['NOMBRE SL'] && p['NOMBRE']) p['NOMBRE SL'] = p['NOMBRE'];
+      if(!p['NOMBRE SL'] && p['EMPRESA']) p['NOMBRE SL'] = p['EMPRESA'];
+      // If still no code, find it from SEED by name
+      if(!p['CODIGO PROVEEDOR']) {
+        var seedMatch = PROVEEDORES_SEED.find(function(s){
+          return (s['NOMBRE SL']||'').toLowerCase() === (p['NOMBRE SL']||p['NOMBRE']||p['EMPRESA']||'').toLowerCase();
+        });
+        if(seedMatch) p['CODIGO PROVEEDOR'] = seedMatch['CODIGO PROVEEDOR'];
+      }
+      return p;
+    });
+    // Add any SEED entries missing from stored (by code)
+    PROVEEDORES_SEED.forEach(function(seed) {
+      var exists = base.find(function(p){
+        return p['CODIGO PROVEEDOR'] === seed['CODIGO PROVEEDOR'] ||
+               (p['NOMBRE SL']||'').toLowerCase() === (seed['NOMBRE SL']||'').toLowerCase();
+      });
+      if(!exists) base.push(seed);
+    });
+  }
+  return base;
+})();
 
 // ═══════════════════════════════════════════════════════
 // CAPA DE ESTABILIDAD v2.0 — IDs, Transacciones, Validaciones
@@ -2337,7 +2367,11 @@ const AuditServiceV2 = {
 
 // ═══════════════════════════════════════════════════════
 // Load from localStorage if available
-let gastos = JSON.parse(localStorage.getItem('on_gastos') || '[]');
+let gastos = (JSON.parse(localStorage.getItem('on_gastos') || '[]')).map(function(g) {
+  // Fix stale/invalid IRPF values: only Subcontrata should have irpfPct > 0
+  if(g.cat !== 'Subcontrata' || (g.irpfPct||0) < 0) { g.irpfPct = 0; g.retencion = 0; }
+  return g;
+});
 let documents = (JSON.parse(localStorage.getItem('on_docs') || '[]')).map(function(d){
   return d.type ? Object.assign({},d,{type:d.type.toLowerCase()}) : d;
 });
@@ -2597,7 +2631,12 @@ function populateEmpresaFields() {
 
 function applyRemoteData(remote, withConfirm) {
   const apply = () => {
-    if(remote.gastos)     gastos=remote.gastos;
+    if(remote.gastos) {
+      gastos = remote.gastos.map(function(g) {
+        if(g.cat !== 'Subcontrata' || (g.irpfPct||0) < 0) { g.irpfPct = 0; g.retencion = 0; }
+        return g;
+      });
+    }
     if(remote.documents)  {
       documents=remote.documents.map(function(d){
         return d.type ? Object.assign({},d,{type:d.type.toLowerCase()}) : d;
@@ -2611,7 +2650,17 @@ function applyRemoteData(remote, withConfirm) {
     if(remote.tareas)     tareas=remote.tareas;
     if(remote.ordenes)    ordenes=remote.ordenes;
     if(remote.eventos)    { eventos=remote.eventos; localStorage.setItem('on_eventos',JSON.stringify(eventos)); }
-    if(remote.proveedores) PROVEEDORES=remote.proveedores;
+    if(remote.proveedores) {
+      PROVEEDORES = remote.proveedores.map(function(p) {
+        if(!p['CODIGO PROVEEDOR'] && p['CODIGO']) p['CODIGO PROVEEDOR'] = p['CODIGO'];
+        if(!p['NOMBRE SL'] && (p['NOMBRE']||p['EMPRESA'])) p['NOMBRE SL'] = p['NOMBRE']||p['EMPRESA'];
+        if(!p['CODIGO PROVEEDOR']) {
+          var s = PROVEEDORES_SEED.find(function(x){ return (x['NOMBRE SL']||'').toLowerCase()===(p['NOMBRE SL']||'').toLowerCase(); });
+          if(s) p['CODIGO PROVEEDOR'] = s['CODIGO PROVEEDOR'];
+        }
+        return p;
+      });
+    }
     if(remote.gastoRecurrentes){gastoRecurrentes=remote.gastoRecurrentes;localStorage.setItem("on_gastos_rec",JSON.stringify(gastoRecurrentes));}
     _lastRemoteSave = Date.now();
     localStorage.setItem('on_last_remote_save', String(_lastRemoteSave));
@@ -2765,10 +2814,10 @@ function showSec(id) {
   if (id==='dashboard') { checkAlerts(); }
   if (id==='cuentas') renderCuentas();
   if (id==='contabilidad') renderContabilidad();
-  if (id==='nuevo-presupuesto') { const n=document.getElementById('p-num'); if(n&&!n.value) n.value=getNextDocNum('presupuesto'); }
-  if (id==='nueva-factura') { const n=document.getElementById('f-num'); if(n&&!n.value) n.value=getNextDocNum('factura'); }
-  if (id==='nueva-proforma') { const n=document.getElementById('pf-num'); if(n&&!n.value) n.value=getNextDocNum('proforma'); populateClienteSelects(); populateProyectoSelects(); }
-  if (id==='nueva-rectificativa') { const n=document.getElementById('rf-num'); if(n&&!n.value) n.value=getNextDocNum('rectificativa'); populateRectificativaOriginalSel(); }
+  if (id==='nuevo-presupuesto') { const n=document.getElementById('p-num'); if(n) n.value=getNextDocNum('presupuesto'); }
+  if (id==='nueva-factura') { const n=document.getElementById('f-num'); if(n) n.value=getNextDocNum('factura'); }
+  if (id==='nueva-proforma') { const n=document.getElementById('pf-num'); if(n) n.value=getNextDocNum('proforma'); populateClienteSelects(); populateProyectoSelects(); }
+  if (id==='nueva-rectificativa') { const n=document.getElementById('rf-num'); if(n) n.value=getNextDocNum('rectificativa'); populateRectificativaOriginalSel(); }
   if (id==='pres-pendientes') renderPresPendientes();
   if (id==='ordenes') renderOrdenes();
   if (id==='fac-pendientes') renderFacPendientes();
@@ -2871,8 +2920,10 @@ function openGastoModal(id) {
     document.getElementById('g-importe').value=parseFloat(g.importe)||0;
     document.getElementById('g-iva-pct').value=g.ivaPct;
     const irpfF = document.getElementById('irpf-field');
-    if(irpfF) irpfF.style.display = g.cat==='Subcontrata' ? '' : 'none';
-    const irpfEl = document.getElementById('g-irpf-pct'); if(irpfEl) irpfEl.value=g.irpfPct||0;
+    const showIRPF = g.cat==='Subcontrata';
+    if(irpfF) irpfF.style.display = showIRPF ? '' : 'none';
+    const irpfEl = document.getElementById('g-irpf-pct');
+    if(irpfEl) irpfEl.value = showIRPF ? (g.irpfPct||0) : 0; // reset if not Subcontrata
     calcGastoTotal();
     document.getElementById('g-metodo').value=g.metodo;
     document.getElementById('g-pagador').value=g.pagador;
@@ -3162,6 +3213,7 @@ function saveGasto() {
     proyCod:document.getElementById('g-proyecto')?.value||'',
     notas:document.getElementById('g-notas').value
   };
+  if(g.cat !== 'Subcontrata' || (g.irpfPct||0) < 0) { g.irpfPct = 0; g.retencion = 0; }
   if(editId){ gastos=gastos.map(x=>String(x.id)===String(editId)?g:x); }
   else {
     gastos.unshift(g);
@@ -3920,6 +3972,27 @@ function savePagoFac() {
     showToast('Pago registrado · Estado: '+doc.estado+' ✅','ok');
   }
 
+  // Create tesoreria entry for the new payment
+  const newPago = doc.pagos[doc.pagos.length-1];
+  if(newPago) {
+    // Remove auto-pending entry for this invoice first
+    tesoreria = tesoreria.filter(function(t){
+      return !(t._autoPendiente && t._docId===String(doc.id) && t.estado==='Pendiente');
+    });
+    // Add confirmed cobro entry
+    tesoreria.unshift({
+      id: generateId(),
+      tipo: 'ingreso',
+      fecha: newPago.fecha || new Date().toISOString().split('T')[0],
+      medio: newPago.medio || doc.medioPago || 'Transferencia',
+      concepto: 'Cobro ' + doc.num + ' — ' + (doc.cliente||''),
+      importe: newPago.importe,
+      estado: 'Realizado',
+      contraparte: doc.cliente||'',
+      ref: doc.num,
+      _docId: String(doc.id)
+    });
+  }
   // Cascade payment state to linked project
   syncProyectoFromDoc(doc);
   saveData();
@@ -5209,19 +5282,32 @@ function buildCashFlow() {
       });
     }
   });
-  // Auto: pagos de facturas as ingresos
-  documents.filter(d=>d.type==='factura').forEach(d=>{
-    (d.pagos||[]).forEach((p,i)=>{
-      const exists = tesoreria.find(t=>t.pagoId===d.id+'_'+i);
-      if(!exists) all.push({
+  // Auto: pagos de facturas as ingresos (skip if already in tesoreria via savePagoFac)
+  documents.filter(function(d){return d.type==='factura';}).forEach(function(d){
+    (d.pagos||[]).forEach(function(p,i){
+      // Check if this specific pago is already in tesoreria (added by savePagoFac)
+      const alreadyInTes = tesoreria.some(function(t){
+        return t._docId===String(d.id) && Math.abs((t.importe||0)-(p.importe||0))<0.01 && t.tipo==='ingreso';
+      });
+      if(!alreadyInTes) all.push({
         id:'p_'+d.id+'_'+i, source:'pago', tipo:'ingreso',
-        fecha:p.fecha||d.fecha||'', concepto:'Cobro '+d.num,
+        fecha:p.fecha||d.fecha||'', concepto:'Cobro '+d.num+' — '+(d.cliente||''),
         contraparte:d.cliente||'', importe:p.importe||0,
         medio:p.medio||d.medioPago||'Transferencia',
-        ref:d.num||'', estado:'Realizado',
-        proyCod:''
+        ref:d.num||'', estado:'Realizado', proyCod:''
       });
     });
+    // If factura is Cobrado/Verificado but has NO pagos recorded, show as auto-ingreso
+    if((d.estado==='Cobrado'||d.estado==='Verificado en banco') && !(d.pagos||[]).length) {
+      const alreadyInTes = tesoreria.some(function(t){ return t._docId===String(d.id)&&t.tipo==='ingreso'; });
+      if(!alreadyInTes) all.push({
+        id:'p_'+d.id+'_auto', source:'pago', tipo:'ingreso',
+        fecha:d.fecha||'', concepto:'Cobro '+d.num+' — '+(d.cliente||''),
+        contraparte:d.cliente||'', importe:d.total||0,
+        medio:d.medioPago||'Transferencia',
+        ref:d.num||'', estado:'Realizado', proyCod:''
+      });
+    }
   });
   return all;
 }
@@ -5369,11 +5455,16 @@ function updateDashboard() {
 
   // ── Facturación: emitida vs cobrada ──────────────────
   const totalEmitido = facturas.reduce((s,d)=>s+(d.total||0),0);
-  const totalCobrado = facturas.reduce((s,d)=>{
-    const cobrado=(d.pagos||[]).reduce((ss,p)=>ss+(p.importe||0),0);
-    return s + (d.estado==='Cobrado' ? (d.total||0) : cobrado);
+  const totalCobrado = facturas.reduce(function(s,d){
+    const cobrado=(d.pagos||[]).reduce(function(ss,p){return ss+(p.importe||0);},0);
+    // If explicitly Cobrado or Verificado: use total; if pagos exist use them; otherwise 0
+    if(d.estado==='Cobrado'||d.estado==='Verificado en banco') return s+(d.total||0);
+    return s+cobrado;
   },0);
-  const facPendientes = facturas.filter(d=>d.estado==='Pendiente de cobro'||d.estado==='Parcialmente cobrado').length;
+  const facPendientes = facturas.filter(function(d){
+    const cobrado=(d.pagos||[]).reduce(function(ss,p){return ss+(p.importe||0);},0);
+    return cobrado < (d.total||0)*0.999 && d.estado!=='Cobrado' && d.estado!=='Verificado en banco';
+  }).length;
 
   // ── Gastos: pagados vs pendientes ────────────────────
   const gastosPagados  = gastosAnyo.filter(g=>g.estado==='Pagado').reduce((s,g)=>s+(g.total||0),0);
@@ -5445,11 +5536,19 @@ function updateDashboard() {
     }
   }
 
-  // Tesorería KPIs en dashboard
-  const efectivoIn=tesoreria.filter(t=>t.tipo==='ingreso'&&t.medio==='Efectivo'&&t.estado==='Realizado').reduce((s,t)=>s+t.importe,0);
-  const efectivoOut=tesoreria.filter(t=>t.tipo==='salida'&&t.medio==='Efectivo'&&t.estado==='Realizado').reduce((s,t)=>s+t.importe,0);
-  const transfIn=tesoreria.filter(t=>t.tipo==='ingreso'&&t.medio==='Transferencia'&&t.estado==='Realizado').reduce((s,t)=>s+t.importe,0);
-  const otrosIn=tesoreria.filter(t=>t.tipo==='ingreso'&&t.estado==='Realizado'&&t.medio!=='Efectivo'&&t.medio!=='Transferencia').reduce((s,t)=>s+t.importe,0);
+  // Tesorería KPIs en dashboard — incluye pagos de facturas aunque no estén en tesorería
+  const tesIngresosReal = [...tesoreria.filter(function(t){return t.tipo==='ingreso'&&t.estado==='Realizado';})];
+  // Add pagos from facturas not already in tesoreria
+  documents.filter(function(d){return d.type==='factura';}).forEach(function(d){
+    (d.pagos||[]).forEach(function(p){
+      const yaEsta=tesIngresosReal.some(function(t){return t._docId===String(d.id)&&Math.abs((t.importe||0)-(p.importe||0))<0.01;});
+      if(!yaEsta) tesIngresosReal.push({tipo:'ingreso',medio:p.medio||d.medioPago||'Transferencia',importe:p.importe||0,estado:'Realizado',_docId:String(d.id)});
+    });
+  });
+  const efectivoIn=tesIngresosReal.filter(function(t){return (t.medio||'').toLowerCase().includes('efectivo');}).reduce(function(s,t){return s+(t.importe||0);},0);
+  const efectivoOut=tesoreria.filter(function(t){return t.tipo==='salida'&&t.medio==='Efectivo'&&t.estado==='Realizado';}).reduce(function(s,t){return s+(t.importe||0);},0);
+  const transfIn=tesIngresosReal.filter(function(t){return (t.medio||'').toLowerCase().includes('transf');}).reduce(function(s,t){return s+(t.importe||0);},0);
+  const otrosIn=tesIngresosReal.filter(function(t){return !(t.medio||'').toLowerCase().includes('efectivo')&&!(t.medio||'').toLowerCase().includes('transf');}).reduce(function(s,t){return s+(t.importe||0);},0);
   const kpEf=document.getElementById('kpi-efectivo'); if(kpEf) kpEf.textContent='€'+(efectivoIn-efectivoOut).toFixed(0);
   const kpTr=document.getElementById('kpi-transf'); if(kpTr) kpTr.textContent='€'+transfIn.toFixed(0);
   const kpOt=document.getElementById('kpi-otros'); if(kpOt) kpOt.textContent='€'+otrosIn.toFixed(0);
@@ -6347,21 +6446,38 @@ function enviarAFacturaPendiente(docId) {
 // FACTURAS PENDIENTES
 // ═══════════════════════════════════════════════════════
 function renderFacPendientes() {
-  // Facturas emitidas pendientes de cobro
-  const facPend=documents.filter(d=>d.type==='factura'&&(d.estado==='Pendiente de cobro'||d.estado==='Parcialmente cobrado'));
-  const facVerif=documents.filter(d=>d.type==='factura'&&d.estado==='Verificado en banco');
-  const kFP=document.getElementById('kpi-fac-pend'); if(kFP) kFP.textContent=facPend.filter(d=>d.estado==='Pendiente de cobro').length;
-  const kFPar=document.getElementById('kpi-fac-parcial'); if(kFPar) kFPar.textContent=facPend.filter(d=>d.estado==='Parcialmente cobrado').length;
+  // Facturas emitidas — todos los estados relevantes
+  const ESTADOS_CANCELADOS = ['Cancelado','Anulado','Rechazado'];
+  const allFacturas = documents.filter(function(d){
+    return d.type==='factura' && !ESTADOS_CANCELADOS.includes(d.estado);
+  });
+  // Calcular estado real de cobro basado en pagos registrados
+  allFacturas.forEach(function(d){
+    const cobrado=(d.pagos||[]).reduce(function(s,p){return s+(p.importe||0);},0);
+    if(cobrado>=(d.total||0)*0.999 && cobrado>0) {
+      if(d.estado!=='Cobrado'&&d.estado!=='Verificado en banco') d.estado='Cobrado';
+    } else if(cobrado>0 && d.estado!=='Parcialmente cobrado') {
+      d.estado='Parcialmente cobrado';
+    } else if(cobrado===0 && !['Cobrado','Verificado en banco','Parcialmente cobrado'].includes(d.estado)) {
+      d.estado='Pendiente de cobro';
+    }
+  });
+  const facPend = allFacturas.filter(function(d){return d.estado==='Pendiente de cobro';});
+  const facParcial = allFacturas.filter(function(d){return d.estado==='Parcialmente cobrado';});
+  const facVerif = allFacturas.filter(function(d){return d.estado==='Verificado en banco';});
+  const facCobradas = allFacturas.filter(function(d){return d.estado==='Cobrado';});
+  const kFP=document.getElementById('kpi-fac-pend'); if(kFP) kFP.textContent=facPend.length;
+  const kFPar=document.getElementById('kpi-fac-parcial'); if(kFPar) kFPar.textContent=facParcial.length;
   const kFVer=document.getElementById('kpi-fac-verif'); if(kFVer) kFVer.textContent=facVerif.length;
-  const totalPend=facPend.reduce((s,d)=>{
-    const cobrado=(d.pagos||[]).reduce((ss,p)=>ss+p.importe,0);
-    return s+((d.total||0)-cobrado);
+  const totalPend=facPend.concat(facParcial).reduce(function(s,d){
+    const cobrado=(d.pagos||[]).reduce(function(ss,p){return ss+(p.importe||0);},0);
+    return s+Math.max(0,(d.total||0)-cobrado);
   },0);
   const kFI=document.getElementById('kpi-fac-importe'); if(kFI) kFI.textContent='€'+totalPend.toFixed(2);
 
-  // Tab 1: facturas emitidas pendientes
+  // Tab 1: TODAS las facturas (ordenadas: pendientes primero, cobradas al final)
   const tb1=document.getElementById('fac-pend-cobro-tbody');
-  const allFacs=[...facPend, ...facVerif];
+  const allFacs=[...facPend, ...facParcial, ...facVerif, ...facCobradas];
   if(tb1) {
     if(!tb1._delegated) {
       tb1._delegated = true;
@@ -10110,9 +10226,9 @@ function validateNumeracion(type, num) {
   const numParts = num.split('-');
   const n = parseInt(numParts[numParts.length-1]);
   if(isNaN(n)||n<=0) return {ok:false, msg:'Número de serie inválido'};
-  // Check for duplicate
-  const dup = documents.find(d=>d.num===num&&d.type===type);
-  if(dup) return {ok:false, msg:`Ya existe un ${type} con número ${num}`};
+  // Check for duplicate — but allow if it's the same doc being edited
+  const dups = documents.filter(d=>d.num===num&&d.type===type&&!d._archived);
+  if(dups.length > 1) return {ok:false, msg:'Número duplicado: ya hay '+dups.length+' documentos con '+num};
   // Check for gap
   const existing = documents.filter(d=>d.type===type&&(d.num||'').startsWith(prefix+'-'+year+'-'));
   const maxN = existing.reduce((mx,d)=>{const p=d.num.split('-');const nn=parseInt(p[p.length-1])||0;return Math.max(mx,nn);},0);
