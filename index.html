@@ -802,7 +802,7 @@ td.m{color:var(--slate);font-size:12px}
   <!-- FILTROS AVANZADOS -->
   <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
     <div class="sbox" style="flex:1;min-width:180px;margin-bottom:0"><span class="sico">🔍</span><input type="text" id="g-search" placeholder="Buscar descripción, categoría, proveedor..." oninput="renderGastos()"></div>
-    <select id="g-fcat" class="fc" style="width:148px" onchange="renderGastos()"><option value="">Todas las categorías</option><option>Operativa</option><option>Marketing</option><option>Materiales</option><option>Subcontrata</option><option>Transporte</option><option>Oficina</option><option>Seguros</option><option>Gestoría</option><option>Otros</option></select>
+    <select id="g-fcat" class="fc" style="width:148px" onchange="renderGastos()"><option value="">Todas las categorías</option><option>Operativa</option><option>Marketing</option><option>Materiales</option><option>Subcontrata</option><option>Transporte</option><option>Oficina</option><option>Seguros</option><option>Gestoría</option><option>Personal IVA</option><option>Otros</option></select>
     <select id="g-festado" class="fc" style="width:128px" onchange="renderGastos()"><option value="">Todos los estados</option><option>Pagado</option><option>Pendiente</option><option>Anulado</option></select>
     <select id="g-fpagador" class="fc" style="width:118px" onchange="renderGastos()"><option value="">Todos los pagadores</option><option>Agustín</option><option>Franco</option><option>ObraNord</option></select>
     <input type="date" id="g-fdesde" class="fc" style="width:138px" onchange="renderGastos()" title="Desde fecha">
@@ -2078,7 +2078,16 @@ td.m{color:var(--slate);font-size:12px}
       <input type="hidden" id="gasto-edit-id">
       <div class="fg fg2">
         <div class="fgrp"><label class="flbl">Fecha *</label><input id="g-fecha" class="fc" type="date"></div>
-        <div class="fgrp"><label class="flbl">Categoría *</label><select id="g-cat" class="fc" onchange="onGastoCatChange()"><option>Operativa</option><option>Marketing</option><option>Materiales</option><option>Subcontrata</option><option>Transporte</option><option>Oficina</option><option>Seguros</option><option>Gestoría</option><option>Otros</option></select></div>
+        <div class="fgrp"><label class="flbl">Tipo de gasto</label>
+          <select id="g-tipo-gasto" class="fc" onchange="toggleTipoGasto(this.value)" title="Personal: compra personal que desgravas el IVA pero NO cuenta como gasto empresa">
+            <option value="empresa">🏢 Empresa (gasto normal)</option>
+            <option value="personal">🧾 Personal — solo desgravo IVA</option>
+          </select>
+        </div>
+        <div id="g-aviso-personal" style="display:none;grid-column:1/-1;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:8px 12px;font-size:11px;color:#856404">
+          ⚠️ <strong>Gasto personal:</strong> El importe NO se descuenta del beneficio de ObraNord pero el IVA sí se registra para la liquidación trimestral.
+        </div>
+        <div class="fgrp"><label class="flbl">Categoría *</label><select id="g-cat" class="fc" onchange="onGastoCatChange()"><option>Operativa</option><option>Marketing</option><option>Materiales</option><option>Subcontrata</option><option>Transporte</option><option>Oficina</option><option>Seguros</option><option>Gestoría</option><option>Personal IVA</option><option>Otros</option></select></div>
         <div class="fgrp" style="grid-column:1/-1"><label class="flbl">Descripción *</label><input id="g-desc" class="fc" placeholder="Ej: Hostinger — alojamiento web anual"></div>
         <div class="fgrp">
           <label class="flbl">Proveedor (opcional)</label>
@@ -2329,7 +2338,9 @@ const AuditServiceV2 = {
 // ═══════════════════════════════════════════════════════
 // Load from localStorage if available
 let gastos = JSON.parse(localStorage.getItem('on_gastos') || '[]');
-let documents = JSON.parse(localStorage.getItem('on_docs') || '[]');
+let documents = (JSON.parse(localStorage.getItem('on_docs') || '[]')).map(function(d){
+  return d.type ? Object.assign({},d,{type:d.type.toLowerCase()}) : d;
+});
 let clientes = JSON.parse(localStorage.getItem('on_clientes') || '[]');
 let proyectos = JSON.parse(localStorage.getItem('on_proyectos') || '[]');
 let tesoreria = JSON.parse(localStorage.getItem('on_tesoreria') || '[]');
@@ -2576,15 +2587,27 @@ async function pollSheetsVersion() {
   }
 }
 
+function populateEmpresaFields() {
+  if(!empresa) return;
+  ['nombre','cif','dir','email','tel','web','iban','pie'].forEach(function(f) {
+    var el = document.getElementById('e-'+f);
+    if(el && empresa[f] !== undefined) el.value = empresa[f];
+  });
+}
+
 function applyRemoteData(remote, withConfirm) {
   const apply = () => {
     if(remote.gastos)     gastos=remote.gastos;
-    if(remote.documents)  documents=remote.documents;
+    if(remote.documents)  {
+      documents=remote.documents.map(function(d){
+        return d.type ? Object.assign({},d,{type:d.type.toLowerCase()}) : d;
+      });
+    }
     if(remote.clientes)   clientes=remote.clientes;
     if(remote.proyectos)  proyectos=remote.proyectos;
     if(remote.tesoreria)  tesoreria=remote.tesoreria;
     if(remote.objetivos)  objetivos=remote.objetivos;
-    if(remote.empresa)    empresa=remote.empresa;
+    if(remote.empresa)    { empresa=remote.empresa; populateEmpresaFields(); }
     if(remote.tareas)     tareas=remote.tareas;
     if(remote.ordenes)    ordenes=remote.ordenes;
     if(remote.eventos)    { eventos=remote.eventos; localStorage.setItem('on_eventos',JSON.stringify(eventos)); }
@@ -2840,6 +2863,7 @@ function openGastoModal(id) {
     document.getElementById('gasto-edit-id').value=id;
     document.getElementById('g-fecha').value=g.fecha;
     document.getElementById('g-cat').value=g.cat;
+    const _tgEl=document.getElementById('g-tipo-gasto');if(_tgEl)_tgEl.value=g.tipoGasto||'empresa';toggleTipoGasto(g.tipoGasto||'empresa');
     document.getElementById('g-desc').value=g.desc;
     document.getElementById('g-prov-input').value=g.prov;
     document.getElementById('g-prov-cod').value=g.provCod;
@@ -2858,6 +2882,7 @@ function openGastoModal(id) {
   } else {
     document.getElementById('modal-gasto-title').textContent='Registrar nuevo gasto';
     document.getElementById('gasto-edit-id').value='';
+    const tgEl=document.getElementById('g-tipo-gasto');if(tgEl)tgEl.value='empresa';toggleTipoGasto('empresa');
     document.getElementById('g-fecha').value=today;
     document.getElementById('g-cat').value='Operativa';
     document.getElementById('g-desc').value='';
@@ -3071,6 +3096,15 @@ function eliminarRecurrente(id) {
   showToast('Recurrente eliminado', 'ok');
 }
 
+function toggleTipoGasto(tipo) {
+  const aviso = document.getElementById('g-aviso-personal');
+  if(aviso) aviso.style.display = tipo==='personal' ? '' : 'none';
+  if(tipo==='personal') {
+    const cat = document.getElementById('g-cat');
+    if(cat) cat.value='Personal IVA';
+  }
+}
+
 function onGastoCatChange() {
   const cat = document.getElementById('g-cat')?.value||'';
   const irpfField = document.getElementById('irpf-field');
@@ -3116,6 +3150,7 @@ function saveGasto() {
     id:editId ? editId : generateId(),
     fecha:document.getElementById('g-fecha').value,
     cat:document.getElementById('g-cat').value,
+    tipoGasto:document.getElementById('g-tipo-gasto')?.value||'empresa',
     desc,
     prov:document.getElementById('g-prov-input').value,
     provCod:document.getElementById('g-prov-cod').value,
@@ -3538,6 +3573,7 @@ function downloadCSV(filename, headers, rows) {
 // HISTORIAL
 // ═══════════════════════════════════════════════════════
 function saveToHistory(item) {
+  if(item && item.type) item.type = item.type.toLowerCase();
   const beforeDoc = documents.find(d => d.num === item.num && d.type === item.type);
   return withTransaction(function() {
   // Check if document with same num already exists — update it instead of duplicating
@@ -4659,7 +4695,8 @@ function populatePresRefSelect(selectedVal) {
 function populateFacRefSelect(selectedVal) {
   const sel = document.getElementById('proy-fac-ref');
   if(!sel) return;
-  const facts = documents.filter(function(d){ return d.type==='factura'||d.type==='proforma'; });
+  // Include all facturas - even unlinked ones so user can reassign after deleting a project
+  const facts = documents.filter(function(d){ return (d.type==='factura'||d.type==='proforma') && !d._convertida; });
   // Support multiple selections: selectedVal can be comma-separated
   const selVals = (selectedVal||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
   sel.innerHTML = '<option value="">— Sin factura vinculada —</option>' +
@@ -5001,13 +5038,13 @@ function deleteProyecto(id) {
   msg += '\nEsta acción NO se puede deshacer.';
   if(!confirm(msg)) return;
   AuditServiceV2.log('DELETE','proyectos',p,null);
-  // Delete associated docs (facturas and presupuestos)
-  documents = documents.filter(d => {
-    if(p.presRef && d.num===p.presRef && d.type==='presupuesto') return false;
-    if(p.facRef && d.num===p.facRef && d.type==='factura') return false;
-    if(d.proyCod===p.codigo) return false;
-    return true;
+  // Unlink docs from project (don't delete — user needs to reassign them)
+  documents.forEach(function(d) {
+    if(d.proyCod===p.codigo) d.proyCod='';
+    if(p.presRef && d.num===p.presRef) d.proyCod='';
+    if(typeof p.facRef==='string' && p.facRef.split(',').some(function(f){return f.trim()===d.num;})) d.proyCod='';
   });
+  ordenes.forEach(function(o){ if(o.proyCod===p.codigo) o.proyCod=''; });
   // Delete associated OTs and gastos
   ordenes = ordenes.filter(o=>o.proyCod!==p.codigo);
   gastos = gastos.filter(g=>g.proyCod!==p.codigo);
@@ -5949,12 +5986,17 @@ function renderContabilidad() {
 
   // ─── Gastos del período ─────────────────────────────────────────────────
   const gastosP = gastos.filter(g => g.estado!=='Anulado' && inPeriod(g.fecha, desde, hasta));
-  const baseSop = gastosP.reduce((s,g)=>s+(g.importe||0),0);
-  const ivaSop = gastosP.reduce((s,g)=>{
+  // Gastos empresa: afectan al beneficio
+  const gastosEmpresaP = gastosP.filter(function(g){return g.tipoGasto!=='personal';});
+  // Gastos personales IVA: solo aportan IVA soportado, NO afectan beneficio
+  const gastosPersonalP = gastosP.filter(function(g){return g.tipoGasto==='personal';});
+  const baseSop = gastosEmpresaP.reduce(function(s,g){return s+(g.importe||0);},0);
+  const ivaSop = gastosP.reduce(function(s,g){ // IVA soportado incluye personal
     const base=g.importe||0; const pct=g.ivaPct||0;
     return s + base*(pct/100);
   },0);
-  const totalGastos = gastosP.reduce((s,g)=>s+(g.total||0),0);
+  const totalGastos = gastosEmpresaP.reduce(function(s,g){return s+(g.total||0);},0);
+  const ivaPersonal = gastosPersonalP.reduce(function(s,g){return s+(g.importe||0)*(g.ivaPct||0)/100;},0);
 
   const ivaLiq = ivaRep - ivaSop;
   const resultado = baseRep - baseSop;
@@ -6943,10 +6985,18 @@ function saveProveedor() {
     PROVEEDORES.unshift(p);
   }
   localStorage.setItem('on_proveedores',JSON.stringify(PROVEEDORES));
+  saveData(); // sync to Sheets so both users see the new proveedor
   closeProvModal(); renderProveedoresDB(); renderProveedores(PROVEEDORES);
   // refresh rubro filter
   const pdbR=document.getElementById('prov-db-rubro');
   if(pdbR) {pdbR.innerHTML='<option value="">Todos rubros</option>'; renderProveedoresDB();}
+  // Refresh OT proveedor select so new proveedor appears immediately
+  const psel = document.getElementById('ot-proveedor');
+  if(psel) psel.innerHTML = '<option value="">— Seleccionar proveedor —</option>' +
+    PROVEEDORES.map(function(p){ return '<option value="'+(p['NOMBRE SL']||'')+'">'+
+      (p['CODIGO PROVEEDOR']?p['CODIGO PROVEEDOR']+' · ':'')+
+      (p['NOMBRE SL']||'')+(p['RUBRO']?' ('+p['RUBRO']+')':'')+
+      '</option>'; }).join('');
   showToast((editId?'Proveedor actualizado':'Proveedor añadido')+' · '+codigo,'ok');
 }
 
@@ -8794,8 +8844,9 @@ function applyImportedClientes(rows, filename) {
 function exportClientes() {
   if(!window.XLSX){showToast('Librería XLSX no disponible','er');return;}
   const today=new Date().toISOString().split('T')[0];
-  const data=[['Código','Nombre/Empresa','NIF/CIF','Email','Teléfono','Dirección','Ciudad','Contacto','Notas','Fecha alta']];
-  clientes.forEach(c=>data.push([c.codigo||'',c.nombre||'',c.nif||'',c.email||'',c.tel||'',c.dir||'',c.ciudad||'',c.contacto||'',c.notas||'',c.creado?c.creado.substring(0,10):'']));
+  // Matches GAS HEADERS['Clientes'] exactly
+  const data=[['ID','Código','Nombre','NIF','Email','Teléfono','Dirección','Ciudad','Contacto','Notas','Fecha alta']];
+  clientes.forEach(function(c){data.push([c.id||'',c.codigo||'',c.nombre||'',c.nif||'',c.email||'',c.tel||'',c.dir||'',c.ciudad||'',c.contacto||'',c.notas||'',c.creado?c.creado.substring(0,10):'']);});
   const ws=XLSX.utils.aoa_to_sheet(data);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Clientes');
@@ -8806,8 +8857,9 @@ function exportClientes() {
 function exportProveedores() {
   if(!window.XLSX){showToast('Librería XLSX no disponible','er');return;}
   const today=new Date().toISOString().split('T')[0];
-  const data=[['Código','Nombre','Rubro','NIF','Email','Teléfono','Teléfono 2','Dirección','Web','Descripción']];
-  PROVEEDORES.forEach(p=>data.push([p['CODIGO PROVEEDOR']||'',p['NOMBRE SL']||'',p['RUBRO']||'',p['NIF']||'',p['EMAIL']||'',p['TELEFONO']||'',p['TELEFONO 2']||'',p['DIRECCION']||'',p['WEB']||'',p['DESCRIPCION']||'']));
+  // Matches GAS HEADERS['Proveedores'] exactly — same column order for round-trip
+  const data=[['Código','Nombre','Rubro','NIF','Email','Teléfono','Teléfono 2','Dirección','Web','Descripción','Ciudad','CP']];
+  PROVEEDORES.forEach(function(p){data.push([p['CODIGO PROVEEDOR']||'',p['NOMBRE SL']||p['NOMBRE']||'',p['RUBRO']||'',p['NIF']||'',p['EMAIL']||'',p['TELEFONO']||'',p['TELEFONO 2']||'',p['DIRECCION']||p['DIR']||'',p['WEB']||'',p['DESCRIPCION']||'',p['CIUDAD']||'',p['CP']||'']);});
   const ws=XLSX.utils.aoa_to_sheet(data);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Proveedores');
@@ -8818,11 +8870,12 @@ function exportProveedores() {
 function exportGastos() {
   if(!window.XLSX){showToast('Librería XLSX no disponible','er');return;}
   const today=new Date().toISOString().split('T')[0];
-  const data=[['Fecha','Descripción','Categoría','Proveedor','Cód.Proveedor','Nº Factura','Base (€)','IVA (%)','IVA (€)','IRPF (%)','Retención (€)','Total (€)','Método pago','Pagador','Estado','Proyecto','Notas']];
-  gastos.forEach(g=>{
+  // Column names MUST match GAS HEADERS exactly for round-trip import
+  const data=[['ID','Fecha','Categoría','Descripción','Proveedor','Cód.Proveedor','Nº Factura','Importe (base)','IVA %','IVA €','IRPF %','Retención','Total','Método','Pagador','Estado','Proyecto','Notas','Tipo gasto']];
+  gastos.forEach(function(g){
     const base=g.importe||0;
-    const ivaE=(base*(g.ivaPct||0)/100);
-    data.push([g.fecha||'',g.desc||'',g.cat||'',g.prov||'',g.provCod||'',g.factura||'',base,g.ivaPct||0,ivaE,g.irpfPct||0,g.retencion||0,g.total||0,g.metodo||'',g.pagador||'',g.estado||'',g.proyCod||'',g.notas||'']);
+    const ivaE=Math.round(base*(g.ivaPct||0)/100*100)/100;
+    data.push([g.id||'',g.fecha||'',g.cat||'',g.desc||'',g.prov||'',g.provCod||'',g.factura||'',base,g.ivaPct||0,ivaE,g.irpfPct||0,g.retencion||0,g.total||0,g.metodo||'',g.pagador||'',g.estado||'',g.proyCod||'',g.notas||'',g.tipoGasto||'empresa']);
   });
   const ws=XLSX.utils.aoa_to_sheet(data);
   const wb=XLSX.utils.book_new();
@@ -8909,6 +8962,8 @@ document.addEventListener('keydown', e=>{
 });
 
 window.addEventListener('DOMContentLoaded', ()=>{
+  // Populate empresa fields from saved data
+  populateEmpresaFields();
   // Restore proveedores from localStorage if previously imported
   const savedProv=localStorage.getItem('on_proveedores');
   if(savedProv) PROVEEDORES=JSON.parse(savedProv);
@@ -9868,20 +9923,33 @@ function exportTodo() {
   XLSX.utils.book_append_sheet(wb,wsCont,'Contabilidad');
 
   // ── 8. CLIENTES ────────────────────────────────────────
-  const datCli=[['Código','Nombre/Empresa','NIF/CIF','Email','Teléfono','Dirección','Ciudad','Contacto','Notas','Fecha alta']];
-  clientes.forEach(c=>datCli.push([c.codigo||'',c.nombre||'',c.nif||'',c.email||'',c.tel||'',c.dir||'',c.ciudad||'',c.contacto||'',c.notas||'',c.creado?c.creado.substring(0,10):'']));
+  const datCli=[['ID','Código','Nombre','NIF','Email','Teléfono','Dirección','Ciudad','Contacto','Notas','Fecha alta']];
+  clientes.forEach(function(c){datCli.push([c.id||'',c.codigo||'',c.nombre||'',c.nif||'',c.email||'',c.tel||'',c.dir||'',c.ciudad||'',c.contacto||'',c.notas||'',c.creado?c.creado.substring(0,10):'']);});
   const wsCli=XLSX.utils.aoa_to_sheet(datCli);
   styleHeader(wsCli, datCli[0].length);
   XLSX.utils.book_append_sheet(wb,wsCli,'Clientes');
 
   // ── 9. PROVEEDORES ─────────────────────────────────────
-  const datProv=[['Código','Nombre','Rubro','NIF','Email','Teléfono','Teléfono 2','Dirección','Web','Descripción']];
-  PROVEEDORES.forEach(p=>datProv.push([p['CODIGO PROVEEDOR']||'',p['NOMBRE SL']||'',p['RUBRO']||'',p['NIF']||'',p['EMAIL']||'',p['TELEFONO']||'',p['TELEFONO 2']||'',p['DIRECCION']||'',p['WEB']||'',p['DESCRIPCION']||'']));
+  const datProv=[['Código','Nombre','Rubro','NIF','Email','Teléfono','Teléfono 2','Dirección','Web','Descripción','Ciudad','CP']];
+  PROVEEDORES.forEach(function(p){datProv.push([p['CODIGO PROVEEDOR']||'',p['NOMBRE SL']||p['NOMBRE']||'',p['RUBRO']||'',p['NIF']||'',p['EMAIL']||'',p['TELEFONO']||'',p['TELEFONO 2']||'',p['DIRECCION']||p['DIR']||'',p['WEB']||'',p['DESCRIPCION']||'',p['CIUDAD']||'',p['CP']||'']);});
   const wsProv=XLSX.utils.aoa_to_sheet(datProv);
   styleHeader(wsProv, datProv[0].length);
   XLSX.utils.book_append_sheet(wb,wsProv,'Proveedores');
 
-  // ── 10. CUENTAS INTERNAS ───────────────────────────────
+  // ── 10. PAGO A PROVEEDORES ─────────────────────────────
+  const datPagoProv=[['Nº OT','Proyecto','Proveedor','Descripción','Coste base (€)','IVA 21% (€)','Total a pagar (€)','Ya pagado (€)','Pendiente (€)','Estado pago','Fecha último pago']];
+  ordenes.filter(function(o){return (o.coste||0)>0;}).forEach(function(o){
+    const base=o.coste||0, iva=Math.round(base*0.21*100)/100, total=base+iva;
+    const pagado=Math.round((o.pagosProveedor||[]).reduce(function(s,p){return s+(p.importe||0);},0)*100)/100;
+    const pend=Math.max(0,Math.round((total-pagado)*100)/100);
+    const lastP=(o.pagosProveedor||[]).slice(-1)[0];
+    datPagoProv.push([o.num||'',o.proyCod||'',o.proveedor||'',o.desc||'',base,iva,total,pagado,pend,o.pagoProveedor||'Pendiente',lastP?lastP.fecha:'']);
+  });
+  const wsPagoProv=XLSX.utils.aoa_to_sheet(datPagoProv);
+  styleHeader(wsPagoProv, datPagoProv[0].length);
+  XLSX.utils.book_append_sheet(wb,wsPagoProv,'Pago a proveedores');
+
+  // ── 11. CUENTAS INTERNAS ───────────────────────────────
   const saldos={};
   gastos.filter(g=>g.estado!=='Anulado').forEach(g=>{
     const m=g.metodo||'Sin especificar';
@@ -9903,7 +9971,7 @@ function exportTodo() {
   styleHeader(wsCuen, datCuen[0].length);
   XLSX.utils.book_append_sheet(wb,wsCuen,'Cuentas internas');
 
-  // ── 11. TAREAS ──────────────────────────────────────────
+  // ── 13. TAREAS ──────────────────────────────────────────
   if(typeof tareas !== 'undefined' && tareas.length) {
     const datTar=[['ID','Título','Responsable','Prioridad','Estado','Vencimiento','Proyecto','Etiquetas','Descripción']];
     tareas.forEach(t=>datTar.push([
