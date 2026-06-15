@@ -5324,8 +5324,62 @@ function saveMovimiento() {
 
 function deleteMovimiento(id) {
   if(!confirm('¿Eliminar este movimiento?')) return;
-  tesoreria=tesoreria.filter(x=>String(x.id)!==String(id));
-  saveData(); renderTesoreria(); updateDashboard(); showToast('Movimiento eliminado');
+  // Case 1: real manual tesoreria entry
+  const tesEntry = tesoreria.find(function(x){return String(x.id)===String(id);});
+  if(tesEntry) {
+    tesoreria=tesoreria.filter(function(x){return String(x.id)!==String(id);});
+    // If linked to a factura's pago, also remove the matching pago so it doesn't reappear as 'auto'
+    if(tesEntry._docId && tesEntry.tipo==='ingreso') {
+      const doc = documents.find(function(d){return String(d.id)===String(tesEntry._docId);});
+      if(doc && doc.pagos && doc.pagos.length) {
+        const pIdx = doc.pagos.findIndex(function(p){return Math.abs((p.importe||0)-(tesEntry.importe||0))<0.01;});
+        if(pIdx!==-1) {
+          doc.pagos.splice(pIdx,1);
+          const cobrado=doc.pagos.reduce(function(s,p){return s+(p.importe||0);},0);
+          if(cobrado>=(doc.total||0)*0.999&&cobrado>0) doc.estado='Cobrado';
+          else if(cobrado>0) doc.estado='Parcialmente cobrado';
+          else doc.estado='Pendiente de cobro';
+          syncProyectoFromDoc(doc);
+          renderFacPendientes(); renderHistory();
+        }
+      }
+    }
+    saveData(); renderTesoreria(); updateDashboard(); showToast('✅ Movimiento eliminado','ok');
+    return;
+  }
+  // Case 2: auto-generated cobro from a factura's pagos[] — id format p_<docId>_<idx> or p_<docId>_auto
+  if(String(id).indexOf('p_')===0) {
+    const rest = String(id).slice(2);
+    const lastUnderscore = rest.lastIndexOf('_');
+    const docId = rest.substring(0, lastUnderscore);
+    const idxStr = rest.substring(lastUnderscore+1);
+    const doc = documents.find(function(d){return String(d.id)===docId;});
+    if(doc) {
+      if(idxStr==='auto') {
+        doc.estado='Pendiente de cobro';
+      } else if(doc.pagos) {
+        const idx=parseInt(idxStr);
+        if(doc.pagos[idx]!==undefined) {
+          doc.pagos.splice(idx,1);
+          const cobrado=doc.pagos.reduce(function(s,p){return s+(p.importe||0);},0);
+          if(cobrado>=(doc.total||0)*0.999&&cobrado>0) doc.estado='Cobrado';
+          else if(cobrado>0) doc.estado='Parcialmente cobrado';
+          else doc.estado='Pendiente de cobro';
+        }
+      }
+      syncProyectoFromDoc(doc);
+      saveData('del_pago_tesoreria','Pago de '+doc.num+' eliminado desde Tesorería');
+      renderTesoreria(); renderFacPendientes(); renderHistory(); updateDashboard();
+      showToast('✅ Cobro de '+doc.num+' eliminado','ok');
+      return;
+    }
+  }
+  // Case 3: auto rows from gastos/OTs — not directly deletable from here
+  if(String(id).indexOf('g_')===0) { showToast('Este movimiento viene de un gasto. Edítalo o márcalo como Anulado en 💸 Gastos.','er'); return; }
+  if(String(id).indexOf('ot_')===0) { showToast('Este movimiento viene de una orden de trabajo. Gestiónalo en 💳 Pago a Proveedores.','er'); return; }
+  // Fallback
+  tesoreria=tesoreria.filter(function(x){return String(x.id)!==String(id);});
+  saveData(); renderTesoreria(); updateDashboard(); showToast('✅ Movimiento eliminado','ok');
 }
 
 // Build unified cash flow from tesoreria[] + gastos[] + documents[].pagos[]
@@ -5412,7 +5466,10 @@ function renderTesoreria() {
     <td><span class="badge ${t.estado==='Realizado'?'bsuc':'bwrn'}">${t.estado}</span></td>
     <td style="white-space:nowrap">${t.source==='manual'?`
       <button class="btn btn-o btn-s" style="padding:4px 8px" onclick="openTesModal('ingreso','${t.id}')">✏️</button>
-      <button class="btn btn-s" style="padding:4px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer;margin-left:3px" onclick=\"deleteMovimiento('\${t.id}')\">🗑</button>`:'<span style="font-size:10px;color:var(--slate)">auto</span>'}
+      <button class="btn btn-s" style="padding:4px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer;margin-left:3px" onclick=\"deleteMovimiento('\${t.id}')\">🗑</button>`:
+      t.source==='pago'?`<span style="font-size:9px;color:var(--slate);margin-right:4px">auto</span>
+      <button class="btn btn-s" style="padding:4px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer" title="Eliminar este pago de la factura" onclick=\"deleteMovimiento('\${t.id}')\">🗑</button>`:
+      '<span style="font-size:10px;color:var(--slate)">auto</span>'}
     </td>
   </tr>`).join(''):'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--slate)">Sin ingresos registrados.</td></tr>';
 
