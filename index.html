@@ -253,14 +253,19 @@ td.m{color:var(--slate);font-size:12px}
     <div class="nav" onclick="showSec('tareas')" style="position:relative"><span class="ni">✅</span>Tareas<span id="sidebar-tareas-badge" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--err);color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:1px 6px;display:none">0</span></div>
   </div>
   <div style="margin-bottom:20px">
-    <div class="slabel">Documentos</div>
+    <div class="slabel">Presupuestos</div>
     <div class="nav" onclick="showSec('nuevo-presupuesto')"><span class="ni">📋</span>Nuevo presupuesto</div>
+    <div class="nav" onclick="showSec('pres-pendientes')"><span class="ni">⏳</span>Presupuestos pendientes</div>
+  </div>
+  <div style="margin-bottom:20px">
+    <div class="slabel">Facturas</div>
     <div class="nav" onclick="showSec('nueva-factura')"><span class="ni">🧾</span>Nueva factura</div>
+    <div class="nav" onclick="showSec('fac-pendientes')"><span class="ni">🔴</span>Facturas pendientes</div>
     <div class="nav" onclick="showSec('nueva-proforma')"><span class="ni">📄</span>Factura Proforma</div>
     <div class="nav" onclick="showSec('nueva-rectificativa')"><span class="ni">↩️</span>Fac. Rectificativa</div>
-    
-    <div class="nav" onclick="showSec('pres-pendientes')"><span class="ni">⏳</span>Presup. pendientes</div>
-    <div class="nav" onclick="showSec('fac-pendientes')"><span class="ni">🔴</span>Facturas pendientes</div>
+  </div>
+  <div style="margin-bottom:20px">
+    <div class="slabel">Documentos</div>
     <div class="nav" onclick="showSec('ordenes')"><span class="ni">💳</span>Pago a Proveedores</div>
     <div class="nav" onclick="showSec('proyectos')"><span class="ni">🏗️</span>Proyectos</div>
     <div class="nav" onclick="showSec('historial')"><span class="ni">📁</span>Historial</div>
@@ -771,6 +776,7 @@ td.m{color:var(--slate);font-size:12px}
       <button class="btn btn-p" onclick="openProvModal()">+ Nuevo proveedor</button>
     </div>
     <button class="btn btn-o btn-s" onclick="showSec('sincronizar')">🔄 Actualizar desde Excel</button>
+    <button class="btn btn-o btn-s" onclick="restaurarProveedoresOriginal()" title="Recupera teléfonos, emails y direcciones de la base original si se perdieron">♻️ Restaurar datos originales</button>
   </div>
   <div class="sbox"><span class="sico">🔍</span><input type="text" id="prov-search" placeholder="Buscar por nombre, código, rubro..." oninput="filterProveedores(this.value)"></div>
   <div class="card"><div class="ctitle">🏭 Directorio</div>
@@ -2221,6 +2227,43 @@ function normalizarProveedores(list) {
   });
 }
 
+function restaurarProveedoresOriginal() {
+  if(!confirm('¿Restaurar teléfonos, emails, direcciones y rubros originales para los proveedores de la base inicial?\n\nNo se tocarán los datos de proveedores que tú añadiste (Artyplan, IKEA, Conexia, etc).'))return;
+  let restored = 0;
+  PROVEEDORES = PROVEEDORES.map(function(p) {
+    var before = JSON.stringify(p);
+    var nm = (p['NOMBRE SL']||p['NOMBRE']||p['EMPRESA']||'').trim().toLowerCase();
+    var seedMatch = PROVEEDORES_SEED.find(function(x){
+      return (p['CODIGO PROVEEDOR'] && x['CODIGO PROVEEDOR']===p['CODIGO PROVEEDOR']) ||
+             (x['NOMBRE SL']||'').trim().toLowerCase()===nm;
+    });
+    if(seedMatch) {
+      if(!p['NOMBRE SL']) p['NOMBRE SL']=seedMatch['NOMBRE SL'];
+      if(!p['CODIGO PROVEEDOR']) p['CODIGO PROVEEDOR']=seedMatch['CODIGO PROVEEDOR'];
+      ['NIF','EMAIL','WEB','TELEFONO','TELEFONO 2','DIRECCION','DIR','RUBRO','DESCRIPCION','CIUDAD','CP'].forEach(function(field){
+        var current=p[field];
+        var seedVal=seedMatch[field];
+        if((current===undefined||current===null||current==='')&&seedVal) p[field]=seedVal;
+      });
+    }
+    if(JSON.stringify(p)!==before) restored++;
+    return p;
+  });
+  // Add any SEED entries entirely missing
+  PROVEEDORES_SEED.forEach(function(seed){
+    var exists=PROVEEDORES.find(function(p){
+      return p['CODIGO PROVEEDOR']===seed['CODIGO PROVEEDOR'] ||
+             (p['NOMBRE SL']||'').trim().toLowerCase()===(seed['NOMBRE SL']||'').trim().toLowerCase();
+    });
+    if(!exists){ PROVEEDORES.push(Object.assign({},seed)); restored++; }
+  });
+  localStorage.setItem('on_proveedores',JSON.stringify(PROVEEDORES));
+  renderProveedores(PROVEEDORES);
+  renderProveedoresDB();
+  saveData('restaurar_proveedores','Restaurados '+restored+' proveedores');
+  showToast('✅ '+restored+' proveedores restaurados/actualizados desde la base original','ok');
+}
+
 let PROVEEDORES = (function() {
   var stored = JSON.parse(localStorage.getItem('on_proveedores')||'null');
   if(!stored || !stored.length) return PROVEEDORES_SEED.slice();
@@ -2836,12 +2879,13 @@ function showSec(id) {
   if (id==='dashboard') { checkAlerts(); }
   if (id==='cuentas') renderCuentas();
   if (id==='contabilidad') renderContabilidad();
-  if (id==='nuevo-presupuesto') { const n=document.getElementById('p-num'); if(n) n.value=getNextDocNum('presupuesto'); const eid=document.getElementById('p-edit-id');if(eid)eid.value=''; }
+  if (id==='nuevo-presupuesto') { const n=document.getElementById('p-num'); if(n) n.value=getNextDocNum('presupuesto'); const eid=document.getElementById('p-edit-id');if(eid)eid.value=''; populateClienteSelects(); populateProyectoSelects(); }
   if (id==='nueva-factura') {
     const n=document.getElementById('f-num'); if(n) n.value=getNextDocNum('factura');
     const eid=document.getElementById('f-edit-id');if(eid)eid.value='';
     const fe=document.getElementById('f-estado');if(fe)fe.value='Pendiente de cobro';
     const fr=document.getElementById('f-resumen-importe');if(fr){fr.style.display='none';fr.innerHTML='';}
+    populateClienteSelects(); populateProyectoSelects();
   }
   if (id==='nueva-proforma') { const n=document.getElementById('pf-num'); if(n) n.value=getNextDocNum('proforma'); populateClienteSelects(); populateProyectoSelects(); }
   if (id==='nueva-rectificativa') { const n=document.getElementById('rf-num'); if(n) n.value=getNextDocNum('rectificativa'); populateRectificativaOriginalSel(); }
@@ -5771,17 +5815,17 @@ async function generatePDF(type) {
     y+=42;
     if(data.obra){doc.setFillColor(245,245,250);doc.rect(14,y,182,8,'F');doc.setTextColor(...GRAY);doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.text('Dirección de obra:',18,y+5.5);doc.setFont('helvetica','normal');doc.text(data.obra,52,y+5.5);y+=12;}
     doc.setDrawColor(...GOLD);doc.setLineWidth(0.8);doc.line(14,y,W-14,y);y+=8;
-    const tData=data.lines.length?data.lines.map(l=>[l.desc,l.qty.toString(),'€ '+l.price.toFixed(2),'€ '+l.total.toFixed(2)]):[['Sin conceptos añadidos','','','']];
+    const tData=data.lines.length?data.lines.map(l=>[l.desc,l.qty.toString(),l.price.toFixed(2)+' €',l.total.toFixed(2)+' €']):[['Sin conceptos añadidos','','','']];
     doc.autoTable({startY:y,head:[['Descripción','Uds','Precio/ud','Total']],body:tData,margin:{left:14,right:14},headStyles:{fillColor:DARK,textColor:[255,255,255],fontSize:8,fontStyle:'bold',cellPadding:4},bodyStyles:{fontSize:8.5,cellPadding:4},columnStyles:{0:{cellWidth:'auto'},1:{cellWidth:18,halign:'center'},2:{cellWidth:28,halign:'right'},3:{cellWidth:28,halign:'right',fontStyle:'bold'}},alternateRowStyles:{fillColor:[250,250,252]}});
     y=doc.lastAutoTable.finalY+8;
     const tW=70,tX=W-14-tW;
     doc.setFillColor(...CREAM);doc.roundedRect(tX-4,y-2,tW+8,32,3,3,'F');
     doc.setFontSize(8);doc.setTextColor(...GRAY);doc.setFont('helvetica','normal');
-    doc.text('Base imponible:',tX,y+6);doc.text('€ '+data.sub.toFixed(2),tX+tW,y+6,{align:'right'});
-    doc.text('IVA (' + (data.ivaPct || 21) + '%):',tX,y+12);doc.text('€ '+data.iva.toFixed(2),tX+tW,y+12,{align:'right'});
+    doc.text('Base imponible:',tX,y+6);doc.text(data.sub.toFixed(2)+' €',tX+tW,y+6,{align:'right'});
+    doc.text('IVA (' + (data.ivaPct || 21) + '%):',tX,y+12);doc.text(data.iva.toFixed(2)+' €',tX+tW,y+12,{align:'right'});
     doc.setDrawColor(...DARK);doc.setLineWidth(0.5);doc.line(tX,y+15,tX+tW,y+15);
     doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...DARK);
-    doc.text('TOTAL',tX,y+23);doc.text('€ '+data.total.toFixed(2),tX+tW,y+23,{align:'right'});
+    doc.text('TOTAL',tX,y+23);doc.text(data.total.toFixed(2)+' €',tX+tW,y+23,{align:'right'});
     y+=40;
     if(data.notas){doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(...DARK);doc.text('Notas:',14,y);doc.setFont('helvetica','normal');doc.setTextColor(...GRAY);doc.splitTextToSize(data.notas,180).slice(0,3).forEach((l,i)=>doc.text(l,14,y+5+i*4.5));y+=5+12;}
     const ibanPDF = data.iban || e.iban || '';
@@ -5947,7 +5991,7 @@ async function generatePDFFromDoc(id) {
   // Líneas
   doc.setDrawColor(...GOLD); doc.setLineWidth(0.8); doc.line(14,y,W-14,y); y+=8;
   const lines = d.lines||[];
-  const tData = lines.length ? lines.map(function(l){ return [l.desc||'',String(l.qty||1),'€ '+(l.price||0).toFixed(2),'€ '+(l.total||0).toFixed(2)]; }) : [['Sin conceptos añadidos','','','']];
+  const tData = lines.length ? lines.map(function(l){ return [l.desc||'',String(l.qty||1),(l.price||0).toFixed(2)+' €',(l.total||0).toFixed(2)+' €']; }) : [['Sin conceptos añadidos','','','']];
   doc.autoTable({startY:y,head:[['Descripción','Uds','Precio/ud','Total']],body:tData,margin:{left:14,right:14},headStyles:{fillColor:DARK,textColor:[255,255,255],fontSize:8,fontStyle:'bold',cellPadding:4},bodyStyles:{fontSize:8.5,cellPadding:4},columnStyles:{0:{cellWidth:'auto'},1:{cellWidth:18,halign:'center'},2:{cellWidth:28,halign:'right'},3:{cellWidth:28,halign:'right',fontStyle:'bold'}},alternateRowStyles:{fillColor:[250,250,252]}});
   y = doc.lastAutoTable.finalY + 8;
 
@@ -5959,11 +6003,11 @@ async function generatePDFFromDoc(id) {
   const tW=70, tX=W-14-tW;
   doc.setFillColor(...CREAM); doc.roundedRect(tX-4,y-2,tW+8,32,3,3,'F');
   doc.setFontSize(8); doc.setTextColor(...GRAY); doc.setFont('helvetica','normal');
-  doc.text('Base imponible:',tX,y+6); doc.text('€ '+sub.toFixed(2),tX+tW,y+6,{align:'right'});
-  doc.text('IVA ('+ivaPct+'%):',tX,y+12); doc.text('€ '+ivaAmt.toFixed(2),tX+tW,y+12,{align:'right'});
+  doc.text('Base imponible:',tX,y+6); doc.text(sub.toFixed(2)+' €',tX+tW,y+6,{align:'right'});
+  doc.text('IVA ('+ivaPct+'%):',tX,y+12); doc.text(ivaAmt.toFixed(2)+' €',tX+tW,y+12,{align:'right'});
   doc.setDrawColor(...DARK); doc.setLineWidth(0.5); doc.line(tX,y+15,tX+tW,y+15);
   doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...DARK);
-  doc.text('TOTAL',tX,y+23); doc.text('€ '+total.toFixed(2),tX+tW,y+23,{align:'right'});
+  doc.text('TOTAL',tX,y+23); doc.text(total.toFixed(2)+' €',tX+tW,y+23,{align:'right'});
   y += 40;
 
   // Notas
@@ -6755,6 +6799,76 @@ function editarPresupuestoDesdeHistorial(docId) {
   });
 }
 
+
+function renderPagosEditor(doc) {
+  const resumenEl = document.getElementById('f-resumen-importe');
+  if(!resumenEl) return;
+  const pagos = doc.pagos||[];
+  const cobrado = pagos.reduce(function(s,p){return s+(p.importe||0);},0);
+  const pendiente = Math.max(0,(doc.total||0)-cobrado);
+  resumenEl.style.display = '';
+  let html = '<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px">'
+    + '<span><strong>Total factura:</strong> €'+(doc.total||0).toFixed(2)+'</span>'
+    + '<span><strong style="color:var(--ok)">Cobrado:</strong> €'+cobrado.toFixed(2)+'</span>'
+    + '<span><strong style="color:'+(pendiente>0?'var(--err)':'var(--ok)')+'">Pendiente:</strong> €'+pendiente.toFixed(2)+'</span>'
+    + '</div>';
+  if(pagos.length) {
+    html += '<div style="font-size:11px;color:var(--slate);margin-bottom:6px">Pagos registrados (editable):</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:6px">';
+    pagos.forEach(function(p, i) {
+      html += '<div style="display:flex;gap:6px;align-items:center;background:#fff;border:1px solid var(--g200);border-radius:8px;padding:6px 8px">'
+        + '<input type="date" class="fc" style="width:130px;padding:4px 6px;font-size:12px" value="'+(p.fecha||'')+'" onchange="updatePagoFactura(\''+doc.id+'\','+i+',\'fecha\',this.value)">'
+        + '<input type="number" step="0.01" class="fc" style="width:110px;padding:4px 6px;font-size:12px" value="'+(p.importe||0)+'" onchange="updatePagoFactura(\''+doc.id+'\','+i+',\'importe\',this.value)">'
+        + '<select class="fc" style="width:130px;padding:4px 6px;font-size:12px" onchange="updatePagoFactura(\''+doc.id+'\','+i+',\'medio\',this.value)">'
+        +   ['Transferencia','Efectivo','Bizum','Tarjeta'].map(function(m){return '<option'+(p.medio===m?' selected':'')+'>'+m+'</option>';}).join('')
+        + '</select>'
+        + '<button type="button" class="btn btn-s" style="padding:3px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer;font-size:11px" onclick="deletePagoFactura(\''+doc.id+'\','+i+')">🗑</button>'
+        + '</div>';
+    });
+    html += '</div>';
+  }
+  resumenEl.innerHTML = html;
+}
+
+function updatePagoFactura(docId, idx, field, value) {
+  const doc = documents.find(function(d){return String(d.id)===String(docId);});
+  if(!doc || !doc.pagos || !doc.pagos[idx]) return;
+  if(field==='importe') doc.pagos[idx][field] = parseFloat(value)||0;
+  else doc.pagos[idx][field] = value;
+  // Recalculate estado based on new total cobrado
+  const cobrado = doc.pagos.reduce(function(s,p){return s+(p.importe||0);},0);
+  if(cobrado >= (doc.total||0)*0.999 && cobrado>0) {
+    if(doc.estado!=='Verificado en banco') doc.estado='Cobrado';
+  } else if(cobrado>0) {
+    doc.estado='Parcialmente cobrado';
+  } else {
+    doc.estado='Pendiente de cobro';
+  }
+  const festado=document.getElementById('f-estado'); if(festado) festado.value=doc.estado;
+  syncProyectoFromDoc(doc);
+  saveData('edit_pago_factura','Factura '+doc.num+' — pago modificado');
+  renderPagosEditor(doc);
+  renderFacPendientes(); renderHistory(); updateDashboard(); renderTesoreria();
+  showToast('✅ Pago actualizado','ok');
+}
+
+function deletePagoFactura(docId, idx) {
+  const doc = documents.find(function(d){return String(d.id)===String(docId);});
+  if(!doc || !doc.pagos || !doc.pagos[idx]) return;
+  if(!confirm('¿Eliminar este pago registrado?')) return;
+  doc.pagos.splice(idx,1);
+  const cobrado = doc.pagos.reduce(function(s,p){return s+(p.importe||0);},0);
+  if(cobrado >= (doc.total||0)*0.999 && cobrado>0) doc.estado='Cobrado';
+  else if(cobrado>0) doc.estado='Parcialmente cobrado';
+  else doc.estado='Pendiente de cobro';
+  const festado=document.getElementById('f-estado'); if(festado) festado.value=doc.estado;
+  syncProyectoFromDoc(doc);
+  saveData('del_pago_factura','Factura '+doc.num+' — pago eliminado');
+  renderPagosEditor(doc);
+  renderFacPendientes(); renderHistory(); updateDashboard(); renderTesoreria();
+  showToast('✅ Pago eliminado','ok');
+}
+
 // ═══════════════════════════════════════════════════════
 // EDITAR FACTURA DESDE HISTORIAL (Bug 2)
 // ═══════════════════════════════════════════════════════
@@ -6772,6 +6886,7 @@ function editarFacturaDesdeHistorial(docId) {
       loadRectificativaForm(doc); return;
     }
     const sv=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v||'';};
+    populateClienteSelects(); populateProyectoSelects();
     const editIdEl=document.getElementById('f-edit-id');if(editIdEl)editIdEl.value=doc.id;
     sv('f-num',doc.num);
     sv('f-fecha',doc.fecha);
@@ -6784,19 +6899,13 @@ function editarFacturaDesdeHistorial(docId) {
     const fpago=document.getElementById('f-pago'); if(fpago&&doc.medioPago) fpago.value=doc.medioPago;
     const fiva=document.getElementById('f-iva-pct'); if(fiva&&doc.ivaPct) fiva.value=doc.ivaPct;
     const fsel=document.getElementById('f-proyecto'); if(fsel&&doc.proyCod) fsel.value=doc.proyCod;
-    const festado=document.getElementById('f-estado'); if(festado) festado.value=doc.estado||'Pendiente de cobro';
-    // Show importe / cobrado / pendiente summary
-    const resumenEl = document.getElementById('f-resumen-importe');
-    if(resumenEl) {
-      const cobrado = (doc.pagos||[]).reduce(function(s,p){return s+(p.importe||0);},0);
-      const pendiente = Math.max(0,(doc.total||0)-cobrado);
-      resumenEl.style.display = '';
-      resumenEl.innerHTML =
-        '<strong>Total factura:</strong> €'+(doc.total||0).toFixed(2)+
-        ' &nbsp;·&nbsp; <strong style="color:var(--ok)">Cobrado:</strong> €'+cobrado.toFixed(2)+
-        ' &nbsp;·&nbsp; <strong style="color:'+(pendiente>0?'var(--err)':'var(--ok)')+'">Pendiente:</strong> €'+pendiente.toFixed(2)+
-        (doc.pagos&&doc.pagos.length ? '<br><span style="font-size:11px;color:var(--slate)">Pagos registrados: '+doc.pagos.map(function(p){return p.fecha+' — €'+p.importe.toFixed(2)+' ('+(p.medio||'')+')';}).join(', ')+'</span>' : '');
+    const festado=document.getElementById('f-estado');
+    if(festado) {
+      const validEstados=['Pendiente de cobro','Parcialmente cobrado','Cobrado','Verificado en banco'];
+      festado.value = validEstados.includes(doc.estado) ? doc.estado : 'Pendiente de cobro';
     }
+    // Show importe / cobrado / pendiente summary with EDITABLE pagos
+    renderPagosEditor(doc);
     const container=document.getElementById('f-lineas'); if(!container) return;
     container.innerHTML='';
     (doc.lines||[]).forEach(l=>{
