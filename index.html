@@ -230,34 +230,8 @@ td.m{color:var(--slate);font-size:12px}
     <div>ObraNord <div class="logo-sub">ERP v2.0</div></div>
   </div>
   <div class="topbar-right" style="display:flex;align-items:center;gap:10px">
-    <!-- BÚSQUEDA GLOBAL -->
-    <div id="global-search-wrap" style="position:relative">
-      <input id="global-search-input" type="text" placeholder="🔍 Buscar…" autocomplete="off"
-        style="background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:13px;padding:7px 12px;width:200px;outline:none;font-family:var(--f)"
-        oninput="onGlobalSearch(this.value)"
-        onfocus="document.getElementById('global-search-results').style.display='block'"
-        onblur="setTimeout(()=>{document.getElementById('global-search-results').style.display='none'},200)"
-      >
-      <div id="global-search-results" style="display:none;position:absolute;top:calc(100% + 6px);right:0;width:340px;background:#fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:9999;max-height:400px;overflow-y:auto;border:1px solid var(--g200)"></div>
-    </div>
-    <!-- BADGE SYNC PERMANENTE -->
-    <div id="sync-badge" title="Estado sincronización Google Sheets"
-      style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:5px 10px;border-radius:20px;cursor:pointer;transition:all .2s;background:rgba(255,255,255,.1);color:var(--slate)"
-      onclick="openSheetsConfig()">
-      <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:var(--slate);flex-shrink:0"></span>
-      <span id="sync-badge-text">Local</span>
-    </div>
-    <!-- ALERTA SYNC FALLIDO -->
-    <div id="sync-error-banner" style="display:none;position:fixed;top:68px;right:16px;z-index:8888;background:#fff;border:2px solid var(--err);border-radius:12px;padding:14px 18px;max-width:320px;box-shadow:0 8px 32px rgba(193,18,31,.2)">
-      <div style="font-weight:700;color:var(--err);font-size:13px;margin-bottom:6px">⚠️ Sync con Google Sheets fallido</div>
-      <div style="font-size:12px;color:var(--g600);margin-bottom:10px">Los datos se guardan localmente, pero <strong>no se están sincronizando</strong> con Google Sheets. Comprueba la conexión o reconfigura el script.</div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-d btn-s" onclick="retrySyncNow()">🔄 Reintentar</button>
-        <button class="btn btn-o btn-s" onclick="document.getElementById('sync-error-banner').style.display='none'">Ignorar</button>
-        <button class="btn btn-o btn-s" onclick="openSheetsConfig()">⚙ Configurar</button>
-      </div>
-    </div>
-    <span class="badge-ver">v23.0 · Barcelona 2026</span>
+    <span style="font-size:12px;color:var(--slate)" id="save-status"></span>
+    <span class="badge-ver">v22.0 · Barcelona 2026</span>
     <button id="mob-menu-btn" style="display:none" onclick="toggleMobileMenu()" aria-label="Menú">☰</button>
   </div>
 </div>
@@ -318,7 +292,7 @@ td.m{color:var(--slate);font-size:12px}
     </div>
   </div>
   <div class="kgrid" style="grid-template-columns:repeat(3,1fr)">
-    <div class="kcard"><div class="klbl">Facturación cobrada</div><div class="kval" id="kpi-fac">€0</div><div class="ksub" id="kpi-fac-sub">€0 emitido · Obj: €150k</div><div class="pbar"><div class="pfill" id="kpi-prog" style="width:0%"></div></div></div>
+    <div class="kcard"><div class="klbl">Facturación emitida</div><div class="kval" id="kpi-fac">€0</div><div class="ksub" id="kpi-fac-sub" style="font-size:11px">€0 cobrado · Obj: €150k</div><div class="pbar"><div class="pfill" id="kpi-prog" style="width:0%"></div></div></div>
     <div class="kcard"><div class="klbl">Gastos pagados</div><div class="kval" id="kpi-gast">€0</div><div class="ksub" id="kpi-gast-sub">€0 pendientes</div></div>
     <div class="kcard" id="kcard-beneficio" style="border-top-color:var(--ok)"><div class="klbl">Beneficio neto</div><div class="kval" id="kpi-beneficio">€0</div><div class="ksub" id="kpi-beneficio-sub">Cobrado − Gastos pagados</div></div>
   </div>
@@ -386,22 +360,6 @@ td.m{color:var(--slate);font-size:12px}
       </div>
     </div>
   </div>
-
-  <!-- GRÁFICO EVOLUCIÓN MENSUAL -->
-  <div class="card" style="margin-top:18px">
-    <div class="ctitle" style="justify-content:space-between">
-      <span>📈 Evolución mensual — últimos 6 meses</span>
-      <span id="dash-chart-legend" style="font-size:11px;font-weight:400;color:var(--slate);display:flex;gap:12px">
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--gold);margin-right:4px"></span>Facturado</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--err);margin-right:4px"></span>Gastos</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--ok);margin-right:4px"></span>Beneficio</span>
-      </span>
-    </div>
-    <div id="dash-chart" style="width:100%;overflow-x:auto">
-      <svg id="dash-chart-svg" width="100%" height="180" style="display:block"></svg>
-    </div>
-  </div>
-
 </div>
 
 <!-- ═══════════════ NUEVO PRESUPUESTO ═══════════════ -->
@@ -440,6 +398,7 @@ td.m{color:var(--slate);font-size:12px}
       <div class="fg fg4">
         <div class="fgrp"><label class="flbl">Nº Presupuesto</label>
           <div style="display:flex;gap:6px;align-items:center">
+            <input type="hidden" id="p-edit-id" value="">
             <input id="p-num" class="fc" placeholder="PRE-2026-001" style="flex:1">
             <select id="p-version" class="fc" style="width:65px" title="Versión del presupuesto">
               <option value="v1">v1</option><option value="v2">v2</option><option value="v3">v3</option>
@@ -467,8 +426,7 @@ td.m{color:var(--slate);font-size:12px}
     </div>
   </div>
   <div id="ptab-lineas" class="tab-panel">
-    <div class="card">
-      <div class="ctitle">📝 Líneas de trabajo</div>
+    <div class="card"><div class="ctitle">📝 Líneas de trabajo</div>
       <div class="lih"><span>Descripción</span><span>Uds</span><span>Precio/ud</span><span>Total</span><span></span></div>
       <div id="p-lineas"></div>
       <button class="btn btn-o" style="margin-top:11px" onclick="addLine('p')">+ Añadir línea</button>
@@ -531,6 +489,7 @@ td.m{color:var(--slate);font-size:12px}
     </div>
     <div class="card"><div class="ctitle">🔢 Numeración</div>
       <div class="fg fg4">
+        <input type="hidden" id="f-edit-id" value="">
         <div class="fgrp"><label class="flbl">Nº Factura</label><input id="f-num" class="fc" placeholder="FAC-2026-001"></div>
         <div class="fgrp"><label class="flbl">Fecha emisión</label><input id="f-fecha" class="fc" type="date"></div>
         <div class="fgrp"><label class="flbl">Vencimiento</label><input id="f-vencimiento" class="fc" type="date"></div>
@@ -560,6 +519,15 @@ td.m{color:var(--slate);font-size:12px}
           </div>
         </div>
         <div class="fgrp"><label class="flbl">Proyecto asociado (código)</label><select id="f-proyecto" class="fc"><option value="">— Sin proyecto —</option></select></div>
+        <div class="fgrp"><label class="flbl">Estado de cobro</label>
+          <select id="f-estado" class="fc">
+            <option value="Pendiente de cobro">🔴 Pendiente de cobro</option>
+            <option value="Parcialmente cobrado">🟡 Parcialmente cobrado</option>
+            <option value="Cobrado">✅ Cobrado</option>
+            <option value="Verificado en banco">🏦 Verificado en banco</option>
+          </select>
+        </div>
+        <div class="fgrp" id="f-resumen-importe" style="display:none;grid-column:1/-1;background:var(--cream);border-radius:8px;padding:10px 14px;font-size:13px"></div>
       </div>
     </div>
   </div>
@@ -2082,6 +2050,7 @@ td.m{color:var(--slate);font-size:12px}
         <div style="display:flex;gap:8px">
           <button class="btn btn-o" onclick="testSheetsConnection()">🔌 Probar conexión</button>
           <button class="btn btn-o" onclick="syncFromSheets()">⬇️ Cargar desde Sheets</button>
+          <button class="btn btn-g" onclick="forzarSincronizacion()">⬆️ Sincronizar ahora (subir todo)</button>
         </div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-o" onclick="document.getElementById('modal-sheets-config').classList.remove('open')">Cancelar</button>
@@ -2223,35 +2192,53 @@ td.m{color:var(--slate);font-size:12px}
 // DATA
 // ═══════════════════════════════════════════════════════
 const PROVEEDORES_SEED = [{"CODIGO PROVEEDOR":"AIR0001","NOMBRE SL":"Juan Santiago","NIF":"","EMAIL":"","WEB":"","TELEFONO":"619749657","TELEFONO 2":"930004419","DIRECCION":"","RUBRO":"Aire Acondicionado","DESCRIPCION":""},{"CODIGO PROVEEDOR":"AIR0002","NOMBRE SL":"Alcaide","NIF":"","EMAIL":"","WEB":"","TELEFONO":"619040621","TELEFONO 2":"933050382","DIRECCION":"","RUBRO":"Aire Acondicionado","DESCRIPCION":"Calderas"},{"CODIGO PROVEEDOR":"ALU0001","NOMBRE SL":"TECHNAL","NIF":"","EMAIL":"","WEB":"","TELEFONO":"605 983 584","TELEFONO 2":"","DIRECCION":"Camí de Can Ametller, 18, 08195 Sant Cugat del Vallès, Barcelona","RUBRO":"Aluminios","DESCRIPCION":"Manetas / Carpinteria en Aluminio"},{"CODIGO PROVEEDOR":"CAL0001","NOMBRE SL":"Sr Duval","NIF":"","EMAIL":"","WEB":"","TELEFONO":"932523850","TELEFONO 2":"","DIRECCION":"","RUBRO":"Calderas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"CAL0002","NOMBRE SL":"Sin Nombre","NIF":"","EMAIL":"","WEB":"","TELEFONO":"605 498 737","TELEFONO 2":"","DIRECCION":"","RUBRO":"Calderas","DESCRIPCION":"Arreglo Caldera Carrer Espinoi en MSB"},{"CODIGO PROVEEDOR":"CER0001","NOMBRE SL":"Jona","NIF":"","EMAIL":"","WEB":"","TELEFONO":"617873421","TELEFONO 2":"","DIRECCION":"","RUBRO":"Cerrajero","DESCRIPCION":""},{"CODIGO PROVEEDOR":"CER0002","NOMBRE SL":"maldonado.es","NIF":"","EMAIL":"","WEB":"","TELEFONO":"644 720 612","TELEFONO 2":"","DIRECCION":"","RUBRO":"Cerrajero","DESCRIPCION":"Instalador de Cerraduras Electronicas"},{"CODIGO PROVEEDOR":"CER0003","NOMBRE SL":"Jaime Suarez","NIF":"","EMAIL":"","WEB":"","TELEFONO":"619 277 732","TELEFONO 2":"","DIRECCION":"","RUBRO":"Cerrajero","DESCRIPCION":""},{"CODIGO PROVEEDOR":"CER0004","NOMBRE SL":"Barna Copy","NIF":"","EMAIL":"","WEB":"","TELEFONO":"671 100 243","TELEFONO 2":"","DIRECCION":"Carrer de Provença, 190, Eixample, 08036 Barcelona","RUBRO":"Cerrajero","DESCRIPCION":"Cerrajeros 24 horas, no son baratos"},{"CODIGO PROVEEDOR":"CES0001","NOMBRE SL":"Arcon SA","NIF":"","EMAIL":"","WEB":"","TELEFONO":"629117478","TELEFONO 2":"936002002","DIRECCION":"","RUBRO":"Cerraduras Salto","DESCRIPCION":""},{"CODIGO PROVEEDOR":"CSB0001","NOMBRE SL":"Santiago","NIF":"","EMAIL":"","WEB":"","TELEFONO":"646190112","TELEFONO 2":"","DIRECCION":"","RUBRO":"Cerrajero / Soldador / Barandas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"ELE0001","NOMBRE SL":"Castro Porterias","NIF":"","EMAIL":"","WEB":"","TELEFONO":"637879012","TELEFONO 2":"","DIRECCION":"","RUBRO":"Electricista","DESCRIPCION":""},{"CODIGO PROVEEDOR":"FOT0001","NOMBRE SL":"Manuel Medir","NIF":"","EMAIL":"","WEB":"","TELEFONO":"654935587","TELEFONO 2":"","DIRECCION":"","RUBRO":"Fotografía","DESCRIPCION":""},{"CODIGO PROVEEDOR":"FOT0002","NOMBRE SL":"Ismael","NIF":"","EMAIL":"","WEB":"","TELEFONO":"636257214","TELEFONO 2":"","DESCRIPCION":""},{"CODIGO PROVEEDOR":"FOT0003","NOMBRE SL":"Nini","NIF":"","EMAIL":"","WEB":"","TELEFONO":"645052838","TELEFONO 2":"","RUBRO":"Fotografía","DESCRIPCION":""},{"CODIGO PROVEEDOR":"FUM0001","NOMBRE SL":"Fumigaciones Bolboreta","NIF":"","EMAIL":"","WEB":"","TELEFONO":"640 893 107","TELEFONO 2":"","RUBRO":"Fumigaciones","DESCRIPCION":""},{"CODIGO PROVEEDOR":"JAR0001","NOMBRE SL":"Jose","NIF":"","EMAIL":"","WEB":"","TELEFONO":"609 344 758","TELEFONO 2":"","RUBRO":"Jardineria","DESCRIPCION":"Tiene contactos de otros provedores"},{"CODIGO PROVEEDOR":"JAR0002","NOMBRE SL":"Uriel","NIF":"","EMAIL":"","WEB":"","TELEFONO":"617 806 495","TELEFONO 2":"","RUBRO":"Jardineria","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LAB0001","NOMBRE SL":"Marta","NIF":"","EMAIL":"","WEB":"","TELEFONO":"","TELEFONO 2":"933132104","RUBRO":"Lavadoras Balay, Bosch, Siemens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LAM0001","NOMBRE SL":"Jauma","NIF":"","EMAIL":"","WEB":"","TELEFONO":"683635152","TELEFONO 2":"","RUBRO":"Lampista","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LAM0002","NOMBRE SL":"Oriol Mangare","NIF":"","EMAIL":"","WEB":"","TELEFONO":"619161419","TELEFONO 2":"","RUBRO":"Lampista","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LAV0001","NOMBRE SL":"Lavanderia Bugamar","NIF":"","EMAIL":"","WEB":"","TELEFONO":"932310410","TELEFONO 2":"","RUBRO":"Lavanderia","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LAV0002","NOMBRE SL":"Lavanderia Bugamar","NIF":"","EMAIL":"","WEB":"","TELEFONO":"665584767","TELEFONO 2":"","RUBRO":"Lavanderia","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LAV0003","NOMBRE SL":"Lavanderia Bugamar","NIF":"","EMAIL":"","WEB":"","TELEFONO":"638079929","TELEFONO 2":"","RUBRO":"Lavanderia","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LIM0001","NOMBRE SL":"Sofía Ríos (Caterina Limpieza)","NIF":"","EMAIL":"","WEB":"","TELEFONO":"625338626","TELEFONO 2":"","RUBRO":"Limpieza","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LIM0002","NOMBRE SL":"Merceditas","NIF":"","EMAIL":"","WEB":"","TELEFONO":"674109417","TELEFONO 2":"","RUBRO":"Limpieza","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LIM0003","NOMBRE SL":"Georgina","NIF":"","EMAIL":"","WEB":"","TELEFONO":"624399270","TELEFONO 2":"","RUBRO":"Limpieza","DESCRIPCION":""},{"CODIGO PROVEEDOR":"LIT0001","NOMBRE SL":"Eduard","NIF":"","EMAIL":"","WEB":"","TELEFONO":"658775370","TELEFONO 2":"","RUBRO":"Limpieza Tapizados","DESCRIPCION":"Limpieza silla 20 €, limpieza sofá 100 €"},{"CODIGO PROVEEDOR":"MAC0001","NOMBRE SL":"Edgar Zamorano","NIF":"","EMAIL":"","WEB":"","TELEFONO":"686197758","TELEFONO 2":"","RUBRO":"Mantenimiento Gral / Cerrajero","DESCRIPCION":""},{"CODIGO PROVEEDOR":"MAE0001","NOMBRE SL":"Fluorescencia i Electricidat","NIF":"","EMAIL":"juliandsg@fluorescencia.cat","WEB":"","TELEFONO":"932008124","TELEFONO 2":"","RUBRO":"Materiales Electricos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"MAG0001","NOMBRE SL":"Luis","NIF":"","EMAIL":"","WEB":"","TELEFONO":"667858280","TELEFONO 2":"","RUBRO":"Mantenimiento Gral","DESCRIPCION":""},{"CODIGO PROVEEDOR":"MAG0002","NOMBRE SL":"Paty (Luis)","NIF":"","EMAIL":"","WEB":"","TELEFONO":"613 325 027","TELEFONO 2":"","RUBRO":"Mantenimiento Gral","DESCRIPCION":"Llamar cuando Luis no atiende"},{"CODIGO PROVEEDOR":"MAG0003","NOMBRE SL":"David Utrera","NIF":"","EMAIL":"","WEB":"","TELEFONO":"667 256 171","TELEFONO 2":"","RUBRO":"Mantenimiento Gral","DESCRIPCION":""},{"CODIGO PROVEEDOR":"MAG0004","NOMBRE SL":"Alex","NIF":"","EMAIL":"","WEB":"","TELEFONO":"683 653 916","TELEFONO 2":"632 947 444","RUBRO":"Mantenimiento Gral","DESCRIPCION":""},{"CODIGO PROVEEDOR":"MAM0001","NOMBRE SL":"GINO","NIF":"","EMAIL":"","WEB":"","TELEFONO":"","TELEFONO 2":"","RUBRO":"Mamparas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"MAN0001","NOMBRE SL":"Alexis","NIF":"","EMAIL":"","WEB":"","TELEFONO":"600255466","TELEFONO 2":"","RUBRO":"Manitas","DESCRIPCION":"25 €/hora aprox / Montaje muebles"},{"CODIGO PROVEEDOR":"MAT0001","NOMBRE SL":"Sanitarios Bosco","NIF":"","EMAIL":"alejandro@sanitariosbosco.es","WEB":"","TELEFONO":"934150864","TELEFONO 2":"","RUBRO":"Materiales Construccion","DESCRIPCION":"Materiales Sanitarios / baños / mamparas"},{"CODIGO PROVEEDOR":"MAT0002","NOMBRE SL":"Siesmo","NIF":"","EMAIL":"","WEB":"","TELEFONO":"666411598","TELEFONO 2":"932036916","RUBRO":"Materiales Construccion","DESCRIPCION":""},{"CODIGO PROVEEDOR":"MDC0001","NOMBRE SL":"Krion","NIF":"","EMAIL":"","WEB":"","TELEFONO":"660 389 521","TELEFONO 2":"","RUBRO":"Materiales de Construccion","DESCRIPCION":"Mamparas / Encimeras / Platos de Ducha"},{"CODIGO PROVEEDOR":"NEV0001","NOMBRE SL":"Frankee SL-","NIF":"","EMAIL":"","WEB":"","TELEFONO":"629556042","TELEFONO 2":"","RUBRO":"Venta de electrodomesticos.","DESCRIPCION":"Empresa Neveras, Lavavajillas, Campanas"},{"CODIGO PROVEEDOR":"OPE0001","NOMBRE SL":"Alcaide","NIF":"","EMAIL":"","WEB":"","TELEFONO":"665985058","TELEFONO 2":"","RUBRO":"Operario","DESCRIPCION":"de Alcaide Empresa"},{"CODIGO PROVEEDOR":"PAL0001","NOMBRE SL":"Genis","NIF":"","EMAIL":"","WEB":"","TELEFONO":"668 852 322","TELEFONO 2":"","RUBRO":"Paleta","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PER0001","NOMBRE SL":"Toni","NIF":"","EMAIL":"","WEB":"","TELEFONO":"654805033","TELEFONO 2":"","RUBRO":"Persianas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PER0002","NOMBRE SL":"Gradhermetic","NIF":"","EMAIL":"jartacho@gradhermetic.es","WEB":"","TELEFONO":"619712060","TELEFONO 2":"689213773","RUBRO":"Persianas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PER0003","NOMBRE SL":"Gradhermetic","NIF":"","EMAIL":"","WEB":"","TELEFONO":"659027111","TELEFONO 2":"","RUBRO":"Persianas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PER0004","NOMBRE SL":"Persiana Berlines","NIF":"","EMAIL":"","WEB":"","TELEFONO":"639366002","TELEFONO 2":"934172365","RUBRO":"Persianas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PER0005","NOMBRE SL":"Linda Persianas","NIF":"","EMAIL":"","WEB":"","TELEFONO":"934173855","TELEFONO 2":"","RUBRO":"Persianas","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0001","NOMBRE SL":"Raul Barriendos","NIF":"","EMAIL":"","WEB":"","TELEFONO":"654095718","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0002","NOMBRE SL":"Cortinas Vallès","NIF":"","EMAIL":"info@cortinasvalles.com","WEB":"https://cortinasvalles.com/","TELEFONO":"619 51 42 90","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0003","NOMBRE SL":"Arandes","NIF":"","EMAIL":"comercial@arandes.es","WEB":"https://www.arandes.es/","TELEFONO":"93 457 12 46","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":"No instalan ni hacen desplazamientos"},{"CODIGO PROVEEDOR":"PES0004","NOMBRE SL":"Montajes y Diseños Marcos S.L.","NIF":"","EMAIL":"myd@infonegocio.com","WEB":"","TELEFONO":"932 45 93 59","TELEFONO 2":"605 988 747","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0005","NOMBRE SL":"La Finestra Cortines a Mida","NIF":"","EMAIL":"ventas@lafinestra-barcelona.com","WEB":"","TELEFONO":"934 51 51 68","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0006","NOMBRE SL":"Persianasamedida.com","NIF":"","EMAIL":"presupuestos@persianasamedida.com","WEB":"","TELEFONO":"932 98 96 76","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0007","NOMBRE SL":"Persi-Decor, S.C.P.","NIF":"","EMAIL":"central@persidecor.net","WEB":"","TELEFONO":"933 14 17 57","TELEFONO 2":"650 32 00 96","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0008","NOMBRE SL":"Persianas Almar","NIF":"","EMAIL":"info@persialmar.es","WEB":"","TELEFONO":"671 127 258","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0009","NOMBRE SL":"Persianas SeguriPro Barcelona","NIF":"","EMAIL":"","WEB":"","TELEFONO":"610320322","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0010","NOMBRE SL":"Persianas GAMAR","NIF":"","EMAIL":"","WEB":"","TELEFONO":"618 50 70 53","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0011","NOMBRE SL":"Reparación e Instalación Soluciones Persianas","NIF":"","EMAIL":"","WEB":"","TELEFONO":"657 36 19 32","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0012","NOMBRE SL":"Alumidina carpintería de aluminio y pvc","NIF":"","EMAIL":"","WEB":"","TELEFONO":"601496453","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0013","NOMBRE SL":"Persianasweb","NIF":"","EMAIL":"","WEB":"","TELEFONO":"687 56 79 33","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0014","NOMBRE SL":"Persianas Tosa","NIF":"","EMAIL":"info@persianastosa.com","WEB":"","TELEFONO":"626 25 78 51","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0015","NOMBRE SL":"Toldos & Persianas ORÚS e Hijos","NIF":"","EMAIL":"orus@toldospersianasorus.com","WEB":"","TELEFONO":"629 79 01 95","TELEFONO 2":"696844917","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0016","NOMBRE SL":"Persianas Raúl","NIF":"","EMAIL":"","WEB":"","TELEFONO":"653 99 07 55","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":"No hacen Screens / Solo persianas"},{"CODIGO PROVEEDOR":"PES0017","NOMBRE SL":"Cortina Tecnica","NIF":"","EMAIL":"info@cortinatecnica.com","WEB":"","TELEFONO":"649 912 182","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0018","NOMBRE SL":"Cortitecnic","NIF":"","EMAIL":"info@cortitecnic.com","WEB":"","TELEFONO":"623249964","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PES0019","NOMBRE SL":"kcontrolsolar","NIF":"","EMAIL":"","WEB":"","TELEFONO":"617 08 17 17","TELEFONO 2":"","RUBRO":"Persianas / Screens","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PIN0001","NOMBRE SL":"Igor","NIF":"","EMAIL":"","WEB":"","TELEFONO":"602 412 137","TELEFONO 2":"","RUBRO":"Pintor","DESCRIPCION":"Pintor de Copiba"},{"CODIGO PROVEEDOR":"PIN0002","NOMBRE SL":"Andrés","NIF":"","EMAIL":"","WEB":"","TELEFONO":"691295209","TELEFONO 2":"","RUBRO":"Pintor","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PLA0001","NOMBRE SL":"Lasha","NIF":"","EMAIL":"","WEB":"","TELEFONO":"631067651","TELEFONO 2":"","RUBRO":"Pladurista","DESCRIPCION":""},{"CODIGO PROVEEDOR":"PST0001","NOMBRE SL":"Toldos Clot","NIF":"","EMAIL":"","WEB":"https://www.toldosclot.com/","TELEFONO":"932 319 302","TELEFONO 2":"","RUBRO":"Persianas / Screens / Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"SOL0001","NOMBRE SL":"Jason Cerrajeria","NIF":"","EMAIL":"","WEB":"","TELEFONO":"615705001","TELEFONO 2":"","RUBRO":"Soldador","DESCRIPCION":"Acero"},{"CODIGO PROVEEDOR":"SOL0002","NOMBRE SL":"Soldador M&J","NIF":"","EMAIL":"","WEB":"","TELEFONO":"667795376","TELEFONO 2":"","RUBRO":"Soldador","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0001","NOMBRE SL":"Catalana de Toldos","NIF":"","EMAIL":"info@catalanadetoldos.cat","WEB":"https://catalanadetoldos.cat/","TELEFONO":"933 256 970","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0002","NOMBRE SL":"Toldos y Cortinas Barcelona S.L.","NIF":"","EMAIL":"info@toldosycortinasbarcelona.com","WEB":"","TELEFONO":"930136312","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0003","NOMBRE SL":"TENDALS TÈCNICS","NIF":"","EMAIL":"comercial@tendalstecnics.com","WEB":"","TELEFONO":"660 389 323","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0004","NOMBRE SL":"Toldos Fibratol S.C.P.","NIF":"","EMAIL":"","WEB":"","TELEFONO":"933 251 670","TELEFONO 2":"661 922 172","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0005","NOMBRE SL":"Toldos Barcino","NIF":"","EMAIL":"","WEB":"","TELEFONO":"933 257 115","TELEFONO 2":"697 532 143","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0006","NOMBRE SL":"Toldos Glorias","NIF":"","EMAIL":"info@toldosglorias.com","WEB":"","TELEFONO":"933145024","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0007","NOMBRE SL":"Tolditec | Toldos Barcelona","NIF":"","EMAIL":"","WEB":"","TELEFONO":"935 959 859","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0008","NOMBRE SL":"Toldos Barcelona","NIF":"","EMAIL":"info@toldos-barcelona.es","WEB":"","TELEFONO":"931 935 055","TELEFONO 2":"615 797 721","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0009","NOMBRE SL":"Toldos Ros","NIF":"","EMAIL":"comercial@toldosros.com","WEB":"","TELEFONO":"934 551 353","TELEFONO 2":"628 310 054","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0010","NOMBRE SL":"Toldos Maragall","NIF":"","EMAIL":"info@toldosmaragall.com","WEB":"","TELEFONO":"934201755","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0011","NOMBRE SL":"Toldos Clot","NIF":"","EMAIL":"","WEB":"","TELEFONO":"932 319 302","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"TOL0012","NOMBRE SL":"Toldos Toldex","NIF":"","EMAIL":"info@toldostoldex.es","WEB":"","TELEFONO":"936 94 05 68","TELEFONO 2":"","RUBRO":"Toldos","DESCRIPCION":""},{"CODIGO PROVEEDOR":"VEN0001","NOMBRE SL":"CEMEVISA","NIF":"","EMAIL":"","WEB":"","TELEFONO":"669819463","TELEFONO 2":"","RUBRO":"Venta de electrodomesticos.","DESCRIPCION":""},{"CODIGO PROVEEDOR":"VID0001","NOMBRE SL":"Pintor","NIF":"","EMAIL":"","WEB":"","TELEFONO":"637807902","TELEFONO 2":"","RUBRO":"Vidrios y Complementos","DESCRIPCION":""}];
+function normalizarProveedores(list) {
+  return list.map(function(p) {
+    // Normalize name field
+    if(!p['NOMBRE SL']) p['NOMBRE SL'] = p['NOMBRE']||p['EMPRESA']||'';
+    // Normalize code field
+    if(!p['CODIGO PROVEEDOR']) p['CODIGO PROVEEDOR'] = p['CODIGO']||'';
+    // Find matching SEED entry by code or name to restore lost fields
+    var nm = (p['NOMBRE SL']||'').trim().toLowerCase();
+    var seedMatch = PROVEEDORES_SEED.find(function(x){
+      return (p['CODIGO PROVEEDOR'] && x['CODIGO PROVEEDOR']===p['CODIGO PROVEEDOR']) ||
+             (x['NOMBRE SL']||'').trim().toLowerCase()===nm;
+    });
+    if(seedMatch) {
+      // Restore code if missing
+      if(!p['CODIGO PROVEEDOR']) p['CODIGO PROVEEDOR'] = seedMatch['CODIGO PROVEEDOR'];
+      // Restore ANY field that is empty in stored but present in SEED
+      // (preserves user edits — only fills genuinely empty fields)
+      ['NIF','EMAIL','WEB','TELEFONO','TELEFONO 2','DIRECCION','DIR','RUBRO','DESCRIPCION','CIUDAD','CP'].forEach(function(field) {
+        var current = p[field];
+        var seedVal = seedMatch[field];
+        if((current===undefined || current===null || current==='') && seedVal) {
+          p[field] = seedVal;
+        }
+      });
+    }
+    return p;
+  });
+}
+
 let PROVEEDORES = (function() {
   var stored = JSON.parse(localStorage.getItem('on_proveedores')||'null');
-  var base = stored || PROVEEDORES_SEED;
-  // Merge: for each SEED entry, if not in stored, add it
-  // This restores codes lost when localStorage had old format
-  if(stored && stored.length > 0) {
-    // Normalize all entries: ensure CODIGO PROVEEDOR comes from any alias
-    base = stored.map(function(p) {
-      if(!p['CODIGO PROVEEDOR'] && p['CODIGO']) p['CODIGO PROVEEDOR'] = p['CODIGO'];
-      if(!p['NOMBRE SL'] && p['NOMBRE']) p['NOMBRE SL'] = p['NOMBRE'];
-      if(!p['NOMBRE SL'] && p['EMPRESA']) p['NOMBRE SL'] = p['EMPRESA'];
-      // If still no code, find it from SEED by name
-      if(!p['CODIGO PROVEEDOR']) {
-        var seedMatch = PROVEEDORES_SEED.find(function(s){
-          return (s['NOMBRE SL']||'').toLowerCase() === (p['NOMBRE SL']||p['NOMBRE']||p['EMPRESA']||'').toLowerCase();
-        });
-        if(seedMatch) p['CODIGO PROVEEDOR'] = seedMatch['CODIGO PROVEEDOR'];
-      }
-      return p;
+  if(!stored || !stored.length) return PROVEEDORES_SEED.slice();
+  var base = normalizarProveedores(stored);
+  // Re-apply SEED codes to any entry that still has no code
+  // Also add missing SEED entries
+  PROVEEDORES_SEED.forEach(function(seed) {
+    var match = base.find(function(p){
+      return p['CODIGO PROVEEDOR']===seed['CODIGO PROVEEDOR'] ||
+             (p['NOMBRE SL']||'').trim().toLowerCase()===(seed['NOMBRE SL']||'').trim().toLowerCase();
     });
-    // Add any SEED entries missing from stored (by code)
-    PROVEEDORES_SEED.forEach(function(seed) {
-      var exists = base.find(function(p){
-        return p['CODIGO PROVEEDOR'] === seed['CODIGO PROVEEDOR'] ||
-               (p['NOMBRE SL']||'').toLowerCase() === (seed['NOMBRE SL']||'').toLowerCase();
-      });
-      if(!exists) base.push(seed);
-    });
-  }
+    if(match) {
+      // Restore code if lost
+      if(!match['CODIGO PROVEEDOR']) match['CODIGO PROVEEDOR'] = seed['CODIGO PROVEEDOR'];
+    } else {
+      base.push(seed);
+    }
+  });
   return base;
 })();
 
@@ -2693,17 +2680,7 @@ function applyRemoteData(remote, withConfirm) {
     if(remote.tareas)     tareas=remote.tareas;
     if(remote.ordenes)    ordenes=remote.ordenes;
     if(remote.eventos)    { eventos=remote.eventos; localStorage.setItem('on_eventos',JSON.stringify(eventos)); }
-    if(remote.proveedores) {
-      PROVEEDORES = remote.proveedores.map(function(p) {
-        if(!p['CODIGO PROVEEDOR'] && p['CODIGO']) p['CODIGO PROVEEDOR'] = p['CODIGO'];
-        if(!p['NOMBRE SL'] && (p['NOMBRE']||p['EMPRESA'])) p['NOMBRE SL'] = p['NOMBRE']||p['EMPRESA'];
-        if(!p['CODIGO PROVEEDOR']) {
-          var s = PROVEEDORES_SEED.find(function(x){ return (x['NOMBRE SL']||'').toLowerCase()===(p['NOMBRE SL']||'').toLowerCase(); });
-          if(s) p['CODIGO PROVEEDOR'] = s['CODIGO PROVEEDOR'];
-        }
-        return p;
-      });
-    }
+    if(remote.proveedores) { PROVEEDORES = normalizarProveedores(remote.proveedores); }
     if(remote.gastoRecurrentes){gastoRecurrentes=remote.gastoRecurrentes;localStorage.setItem("on_gastos_rec",JSON.stringify(gastoRecurrentes));}
     _lastRemoteSave = Date.now();
     localStorage.setItem('on_last_remote_save', String(_lastRemoteSave));
@@ -2755,6 +2732,8 @@ function saveData(auditAction, auditDetail) {
     localStorage.setItem('on_tareas',JSON.stringify(tareas));
     localStorage.setItem('on_ordenes',JSON.stringify(ordenes));
     localStorage.setItem('on_eventos',JSON.stringify(eventos));
+    localStorage.setItem('on_proveedores',JSON.stringify(PROVEEDORES));
+    localStorage.setItem('on_gasto_recurrentes',JSON.stringify(gastoRecurrentes));
     if(auditAction) logAudit(auditAction, auditDetail||'');
     if(GAS_URL){
       if(_saveQueue) clearTimeout(_saveQueue);
@@ -2854,19 +2833,22 @@ function showSec(id) {
   if (id==='proyectos') renderProyectos();
   if (id==='tesoreria') renderTesoreria();
   if (id==='empresa') { renderObjetivos(); const el=document.getElementById('sheets-status-empresa'); if(el) el.textContent=GAS_URL?'☁️ Configurado':'⚠️ No configurado — solo local'; }
-
+  if (id==='dashboard') { checkAlerts(); }
   if (id==='cuentas') renderCuentas();
   if (id==='contabilidad') renderContabilidad();
-  if (id==='nuevo-presupuesto') { const n=document.getElementById('p-num'); if(n) n.value=getNextDocNum('presupuesto'); }
-  if (id==='nueva-factura') { const n=document.getElementById('f-num'); if(n) n.value=getNextDocNum('factura'); }
+  if (id==='nuevo-presupuesto') { const n=document.getElementById('p-num'); if(n) n.value=getNextDocNum('presupuesto'); const eid=document.getElementById('p-edit-id');if(eid)eid.value=''; }
+  if (id==='nueva-factura') {
+    const n=document.getElementById('f-num'); if(n) n.value=getNextDocNum('factura');
+    const eid=document.getElementById('f-edit-id');if(eid)eid.value='';
+    const fe=document.getElementById('f-estado');if(fe)fe.value='Pendiente de cobro';
+    const fr=document.getElementById('f-resumen-importe');if(fr){fr.style.display='none';fr.innerHTML='';}
+  }
   if (id==='nueva-proforma') { const n=document.getElementById('pf-num'); if(n) n.value=getNextDocNum('proforma'); populateClienteSelects(); populateProyectoSelects(); }
   if (id==='nueva-rectificativa') { const n=document.getElementById('rf-num'); if(n) n.value=getNextDocNum('rectificativa'); populateRectificativaOriginalSel(); }
   if (id==='pres-pendientes') renderPresPendientes();
   if (id==='ordenes') renderOrdenes();
   if (id==='fac-pendientes') renderFacPendientes();
   if (id==='tareas') renderTareas();
-  // v23: gráfico dashboard + checkAlerts
-  if (id==='dashboard') { checkAlerts(); setTimeout(renderDashChart, 50); }
 }
 
 function switchTab(el, tabId) {
@@ -4668,8 +4650,12 @@ function genProyCodigo() {
 
 function populateProyectoSelects() {
   const opts = '<option value="">— Sin proyecto —</option>' +
-    proyectos.filter(p=>p.estado!=='Cancelado'&&p.estado!=='Finalizado')
-    .map(p=>`<option value="${p.codigo||p.id}">${p.codigo||''} · ${p.nombre}</option>`).join('');
+    proyectos.filter(p=>p.estado!=='Cancelado')
+    .sort((a,b)=>{
+      const order={'Activo':0,'En captación':1,'Presupuesto':2,'Facturado':3,'Finalizado':4};
+      return (order[a.estado]||5)-(order[b.estado]||5);
+    })
+    .map(p=>`<option value="${p.codigo||p.id}">${p.codigo||''} · ${p.nombre}${p.estado==='Finalizado'?' (Finalizado)':''}</option>`).join('');
   ['g-proyecto','p-proyecto','f-proyecto','pf-proyecto'].forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.innerHTML = opts;
@@ -5205,10 +5191,12 @@ function renderProyectos() {
     return `<tr>
       <td><span class="badge bgry" style="font-size:10px">${p.codigo||'—'}</span></td>
       <td><strong><span class="${'sem '+semColor[p.estado]}"></span>${p.nombre}</strong>
-        ${p.clienteNombre?`<br><span style="font-size:11px;color:var(--slate)">${p.clienteNombre}</span>`:''}
-        ${(p.cofinanciadores&&p.cofinanciadores.length>1)?p.cofinanciadores.map(c=>`<br><span style="font-size:10px;color:var(--gold)">🤝 ${c.clienteNombre} ${c.pct}% €${(c.importeAsignado||0).toFixed(0)}</span>`).join(''):''}
         ${p.presRef?`<br><span style="font-size:10px;color:var(--slate)">PRE: ${p.presRef}</span>`:''}
         ${p.facRef?`<br><span style="font-size:10px;color:var(--gold)">FAC: ${p.facRef}</span>`:''}
+      </td>
+      <td>
+        <span style="font-size:12px">${p.clienteNombre||'—'}</span>
+        ${(p.cofinanciadores&&p.cofinanciadores.length>1)?p.cofinanciadores.map(c=>`<br><span style="font-size:10px;color:var(--gold)">🤝 ${c.clienteNombre} ${c.pct}%</span>`).join(''):''}
       </td>
       <td><span class="badge ${estadoColor[p.estado]||'bgry'}">${p.estado}</span></td>
       <td class="m">${p.inicio||'—'}</td>
@@ -5527,10 +5515,10 @@ function updateDashboard() {
   const el  = (id, v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
   const cls = (id, c) => { const e=document.getElementById(id); if(e) e.className=c; };
 
-  el('kpi-fac',     fmt(totalCobrado));
-  el('kpi-fac-sub', fmt(totalEmitido)+' emitido · Obj: €150k');
+  el('kpi-fac',     fmt(totalEmitido));
+  el('kpi-fac-sub', fmt(totalCobrado)+' cobrado · Obj: €150k');
   el('kpi-prog', ''); // manejado abajo
-  document.getElementById('kpi-prog').style.width = Math.min(100, totalCobrado/1500).toFixed(1)+'%';
+  document.getElementById('kpi-prog').style.width = Math.min(100, totalEmitido/1500).toFixed(1)+'%';
 
   el('kpi-gast',     fmt(gastosPagados));
   el('kpi-gast-sub', gastosPendient>0 ? fmt(gastosPendient)+' pendientes' : 'Sin gastos pendientes');
@@ -5695,6 +5683,7 @@ function getDocData(type) {
   const sub=lines.reduce((s,l)=>s+l.total,0);
   const ivaPctF=parseFloat(document.getElementById('f-iva-pct')?.value||document.getElementById('e-iva')?.value||21);
   const ivaDec=ivaPctF/100;
+  const fEstadoEl = document.getElementById('f-estado');
   return {
     type:'FACTURA', typeEs:'factura',
     num: document.getElementById('f-num')?.value||'',
@@ -5705,8 +5694,11 @@ function getDocData(type) {
     dirCliente: document.getElementById('f-dir')?.value||'',
     emailCliente: document.getElementById('f-email')?.value||'',
     pago: document.getElementById('f-pago')?.value||'',
+    medioPago: document.getElementById('f-pago')?.value||'',
     iban: document.getElementById('f-iban')?.value||'',
     presRef: document.getElementById('f-pres-ref')?.value||'',
+    proyCod: document.getElementById('f-proyecto')?.value||'',
+    estado: fEstadoEl ? fEstadoEl.value : '',
     notas: '',
     ivaPct: ivaPctF,
     lines, sub,
@@ -5779,17 +5771,17 @@ async function generatePDF(type) {
     y+=42;
     if(data.obra){doc.setFillColor(245,245,250);doc.rect(14,y,182,8,'F');doc.setTextColor(...GRAY);doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.text('Dirección de obra:',18,y+5.5);doc.setFont('helvetica','normal');doc.text(data.obra,52,y+5.5);y+=12;}
     doc.setDrawColor(...GOLD);doc.setLineWidth(0.8);doc.line(14,y,W-14,y);y+=8;
-    const tData=data.lines.length?data.lines.map(l=>[l.desc,l.qty.toString(),'€'+l.price.toFixed(2),'€'+l.total.toFixed(2)]):[['Sin conceptos añadidos','','','']];
+    const tData=data.lines.length?data.lines.map(l=>[l.desc,l.qty.toString(),'€ '+l.price.toFixed(2),'€ '+l.total.toFixed(2)]):[['Sin conceptos añadidos','','','']];
     doc.autoTable({startY:y,head:[['Descripción','Uds','Precio/ud','Total']],body:tData,margin:{left:14,right:14},headStyles:{fillColor:DARK,textColor:[255,255,255],fontSize:8,fontStyle:'bold',cellPadding:4},bodyStyles:{fontSize:8.5,cellPadding:4},columnStyles:{0:{cellWidth:'auto'},1:{cellWidth:18,halign:'center'},2:{cellWidth:28,halign:'right'},3:{cellWidth:28,halign:'right',fontStyle:'bold'}},alternateRowStyles:{fillColor:[250,250,252]}});
     y=doc.lastAutoTable.finalY+8;
     const tW=70,tX=W-14-tW;
     doc.setFillColor(...CREAM);doc.roundedRect(tX-4,y-2,tW+8,32,3,3,'F');
     doc.setFontSize(8);doc.setTextColor(...GRAY);doc.setFont('helvetica','normal');
-    doc.text('Base imponible:',tX,y+6);doc.text('€'+data.sub.toFixed(2),tX+tW,y+6,{align:'right'});
-    doc.text('IVA (' + (data.ivaPct || 21) + '%):',tX,y+12);doc.text('€'+data.iva.toFixed(2),tX+tW,y+12,{align:'right'});
+    doc.text('Base imponible:',tX,y+6);doc.text('€ '+data.sub.toFixed(2),tX+tW,y+6,{align:'right'});
+    doc.text('IVA (' + (data.ivaPct || 21) + '%):',tX,y+12);doc.text('€ '+data.iva.toFixed(2),tX+tW,y+12,{align:'right'});
     doc.setDrawColor(...DARK);doc.setLineWidth(0.5);doc.line(tX,y+15,tX+tW,y+15);
     doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...DARK);
-    doc.text('TOTAL',tX,y+23);doc.text('€'+data.total.toFixed(2),tX+tW,y+23,{align:'right'});
+    doc.text('TOTAL',tX,y+23);doc.text('€ '+data.total.toFixed(2),tX+tW,y+23,{align:'right'});
     y+=40;
     if(data.notas){doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(...DARK);doc.text('Notas:',14,y);doc.setFont('helvetica','normal');doc.setTextColor(...GRAY);doc.splitTextToSize(data.notas,180).slice(0,3).forEach((l,i)=>doc.text(l,14,y+5+i*4.5));y+=5+12;}
     const ibanPDF = data.iban || e.iban || '';
@@ -5955,7 +5947,7 @@ async function generatePDFFromDoc(id) {
   // Líneas
   doc.setDrawColor(...GOLD); doc.setLineWidth(0.8); doc.line(14,y,W-14,y); y+=8;
   const lines = d.lines||[];
-  const tData = lines.length ? lines.map(function(l){ return [l.desc||'',String(l.qty||1),'€'+(l.price||0).toFixed(2),'€'+(l.total||0).toFixed(2)]; }) : [['Sin conceptos añadidos','','','']];
+  const tData = lines.length ? lines.map(function(l){ return [l.desc||'',String(l.qty||1),'€ '+(l.price||0).toFixed(2),'€ '+(l.total||0).toFixed(2)]; }) : [['Sin conceptos añadidos','','','']];
   doc.autoTable({startY:y,head:[['Descripción','Uds','Precio/ud','Total']],body:tData,margin:{left:14,right:14},headStyles:{fillColor:DARK,textColor:[255,255,255],fontSize:8,fontStyle:'bold',cellPadding:4},bodyStyles:{fontSize:8.5,cellPadding:4},columnStyles:{0:{cellWidth:'auto'},1:{cellWidth:18,halign:'center'},2:{cellWidth:28,halign:'right'},3:{cellWidth:28,halign:'right',fontStyle:'bold'}},alternateRowStyles:{fillColor:[250,250,252]}});
   y = doc.lastAutoTable.finalY + 8;
 
@@ -5967,11 +5959,11 @@ async function generatePDFFromDoc(id) {
   const tW=70, tX=W-14-tW;
   doc.setFillColor(...CREAM); doc.roundedRect(tX-4,y-2,tW+8,32,3,3,'F');
   doc.setFontSize(8); doc.setTextColor(...GRAY); doc.setFont('helvetica','normal');
-  doc.text('Base imponible:',tX,y+6); doc.text('€'+sub.toFixed(2),tX+tW,y+6,{align:'right'});
-  doc.text('IVA ('+ivaPct+'%):',tX,y+12); doc.text('€'+ivaAmt.toFixed(2),tX+tW,y+12,{align:'right'});
+  doc.text('Base imponible:',tX,y+6); doc.text('€ '+sub.toFixed(2),tX+tW,y+6,{align:'right'});
+  doc.text('IVA ('+ivaPct+'%):',tX,y+12); doc.text('€ '+ivaAmt.toFixed(2),tX+tW,y+12,{align:'right'});
   doc.setDrawColor(...DARK); doc.setLineWidth(0.5); doc.line(tX,y+15,tX+tW,y+15);
   doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...DARK);
-  doc.text('TOTAL',tX,y+23); doc.text('€'+total.toFixed(2),tX+tW,y+23,{align:'right'});
+  doc.text('TOTAL',tX,y+23); doc.text('€ '+total.toFixed(2),tX+tW,y+23,{align:'right'});
   y += 40;
 
   // Notas
@@ -6659,11 +6651,14 @@ function guardarFactura() {
   if(!cliente){showToast('Indica el cliente de la factura','er');return;}
   const data = getDocData('f');
   if(!data){showToast('Completa los datos antes de guardar','er');return;}
-  // Numeración validation
-  const numCheck = validateNumeracion('factura', data.num);
-  if(!numCheck.ok){
-    if(numCheck.warn){if(!confirm(numCheck.msg+'\n\n¿Continuar de todas formas?'))return;}
-    else{showToast('⚠️ '+numCheck.msg,'er');return;}
+  const editId = document.getElementById('f-edit-id')?.value||'';
+  // Numeración validation — skip if editing existing doc
+  if(!editId) {
+    const numCheck = validateNumeracion('factura', data.num);
+    if(!numCheck.ok){
+      if(numCheck.warn){if(!confirm(numCheck.msg+'\n\n¿Continuar de todas formas?'))return;}
+      else{showToast('⚠️ '+numCheck.msg,'er');return;}
+    }
   }
   // Link to project
   const proyCodSel = document.getElementById('f-proyecto')?.value||'';
@@ -6671,14 +6666,30 @@ function guardarFactura() {
     const proj=proyectos.find(p=>p.codigo===proyCodSel);
     if(proj){proj.facRef=data.num;proj.importeFac=data.total;proj.estado='Facturado';}
   }
-  saveToHistory(data);
+  if(editId) {
+    // UPDATE — preserve pagos, estado cobro, and other fields
+    const idx = documents.findIndex(function(d){return String(d.id)===String(editId);});
+    if(idx !== -1) {
+      const existing = documents[idx];
+      documents[idx] = Object.assign({}, existing, {
+        num:data.num, fecha:data.fecha, vencimiento:data.vencimiento,
+        cliente:data.cliente, nifCliente:data.nifCliente,
+        dirCliente:data.dirCliente, emailCliente:data.emailCliente,
+        obra:data.obra, medioPago:data.medioPago, ivaPct:data.ivaPct,
+        sub:data.sub, iva:data.iva, total:data.total,
+        lines:data.lines, notas:data.notas, proyCod:data.proyCod, iban:data.iban,
+        estado: data.estado || existing.estado
+        // Preserved: id, type, pagos, pagosAnticipo, _convertida
+      });
+      const eid=document.getElementById('f-edit-id');if(eid)eid.value='';
+      showToast('✅ Factura '+data.num+' actualizada','ok');
+    } else { showToast('No se encontró la factura','er'); return; }
+  } else {
+    saveToHistory(data);
+    showToast('✅ Factura '+data.num+' guardada','ok');
+  }
   saveData('save_factura','Factura '+data.num+' — '+cliente);
-  renderFacPendientes();
-  renderProyectos();
-  renderHistory();
-  updateDashboard();
-  checkAlerts();
-  showToast('✅ Factura '+data.num+' guardada en historial','ok');
+  renderFacPendientes(); renderProyectos(); renderHistory(); updateDashboard(); checkAlerts();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -6690,7 +6701,15 @@ function editarPresupuestoDesdeHistorial(docId) {
   showSec('nuevo-presupuesto');
   waitForElement('p-num').then(function() {
     const sv=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v||'';};
-    sv('p-num',doc.num);
+    const editIdEl=document.getElementById('p-edit-id');if(editIdEl)editIdEl.value=doc.id;
+    // Fix corrupted numbering (e.g. num saved as FAC-xxx for a presupuesto)
+    const year=new Date().getFullYear();
+    let numToUse = doc.num;
+    if(!numToUse || !numToUse.startsWith('PRE-'+year+'-')) {
+      numToUse = getNextDocNum('presupuesto');
+      showToast('⚠️ Número corregido a '+numToUse+' (formato anterior incorrecto)','');
+    }
+    sv('p-num',numToUse);
     sv('p-fecha',doc.fecha);
     sv('p-validez',doc.validez);
     sv('p-cliente',doc.cliente);
@@ -6753,6 +6772,7 @@ function editarFacturaDesdeHistorial(docId) {
       loadRectificativaForm(doc); return;
     }
     const sv=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v||'';};
+    const editIdEl=document.getElementById('f-edit-id');if(editIdEl)editIdEl.value=doc.id;
     sv('f-num',doc.num);
     sv('f-fecha',doc.fecha);
     sv('f-vencimiento',doc.vencimiento);
@@ -6764,6 +6784,19 @@ function editarFacturaDesdeHistorial(docId) {
     const fpago=document.getElementById('f-pago'); if(fpago&&doc.medioPago) fpago.value=doc.medioPago;
     const fiva=document.getElementById('f-iva-pct'); if(fiva&&doc.ivaPct) fiva.value=doc.ivaPct;
     const fsel=document.getElementById('f-proyecto'); if(fsel&&doc.proyCod) fsel.value=doc.proyCod;
+    const festado=document.getElementById('f-estado'); if(festado) festado.value=doc.estado||'Pendiente de cobro';
+    // Show importe / cobrado / pendiente summary
+    const resumenEl = document.getElementById('f-resumen-importe');
+    if(resumenEl) {
+      const cobrado = (doc.pagos||[]).reduce(function(s,p){return s+(p.importe||0);},0);
+      const pendiente = Math.max(0,(doc.total||0)-cobrado);
+      resumenEl.style.display = '';
+      resumenEl.innerHTML =
+        '<strong>Total factura:</strong> €'+(doc.total||0).toFixed(2)+
+        ' &nbsp;·&nbsp; <strong style="color:var(--ok)">Cobrado:</strong> €'+cobrado.toFixed(2)+
+        ' &nbsp;·&nbsp; <strong style="color:'+(pendiente>0?'var(--err)':'var(--ok)')+'">Pendiente:</strong> €'+pendiente.toFixed(2)+
+        (doc.pagos&&doc.pagos.length ? '<br><span style="font-size:11px;color:var(--slate)">Pagos registrados: '+doc.pagos.map(function(p){return p.fecha+' — €'+p.importe.toFixed(2)+' ('+(p.medio||'')+')';}).join(', ')+'</span>' : '');
+    }
     const container=document.getElementById('f-lineas'); if(!container) return;
     container.innerHTML='';
     (doc.lines||[]).forEach(l=>{
@@ -7021,11 +7054,14 @@ function guardarPresupuesto() {
   // Collect form data
   const data=getDocData('p');
   if(!data){showToast('Completa los datos antes de guardar','er');return;}
-  // Numeración validation
-  const numCheck = validateNumeracion('presupuesto', data.num);
-  if(!numCheck.ok){
-    if(numCheck.warn){if(!confirm(numCheck.msg+'\n\n¿Continuar?'))return;}
-    else{showToast('⚠️ '+numCheck.msg,'er');return;}
+  const editId = document.getElementById('p-edit-id')?.value||'';
+  // Numeración validation — skip duplicate check if editing existing doc
+  if(!editId) {
+    const numCheck = validateNumeracion('presupuesto', data.num);
+    if(!numCheck.ok){
+      if(numCheck.warn){if(!confirm(numCheck.msg+'\n\n¿Continuar?'))return;}
+      else{showToast('⚠️ '+numCheck.msg,'er');return;}
+    }
   }
   // Link to project — autoLinkDocToProject handles creation/update automatically
   const proyCodSel = document.getElementById('p-proyecto')?.value||'';
@@ -7034,30 +7070,49 @@ function guardarPresupuesto() {
     if(proj) { proj.importePres=data.total; proj.presRef=data.num; }
     data.proyCod = proyCodSel;
   }
-  // Save to history with anticipo payments
-  const version = document.getElementById('p-version')?.value||'v1';
-  // If version > v1, keep old version with suffix in num
-  if(version !== 'v1') {
-    const numBase = data.num;
-    const existingDoc = documents.find(d=>d.num===numBase&&d.type==='presupuesto');
-    if(existingDoc) {
-      // Archive old version with suffix
-      const archivedNum = numBase + '-' + existingDoc.version||'v1';
-      const archived = {...existingDoc, num: archivedNum, _archived: true};
-      documents.unshift(archived);
+
+  if(editId) {
+    // UPDATE existing presupuesto — preserve id, type, estado history etc.
+    const idx = documents.findIndex(function(d){return String(d.id)===String(editId);});
+    if(idx !== -1) {
+      const existing = documents[idx];
+      documents[idx] = Object.assign({}, existing, {
+        num:data.num, fecha:data.fecha, validez:data.validez, pago:data.pago,
+        cliente:data.cliente, nifCliente:data.nifCliente, dirCliente:data.dirCliente,
+        emailCliente:data.emailCliente, obra:data.obra, notas:data.notas,
+        ivaPct:data.ivaPct, lines:data.lines, sub:data.sub, iva:data.iva, total:data.total,
+        proyCod:data.proyCod||existing.proyCod, estado:data.estado||existing.estado,
+        pagosAnticipo:[..._pPresAnticipo]
+      });
+      const eid=document.getElementById('p-edit-id');if(eid)eid.value='';
+      showToast('✅ Presupuesto '+data.num+' actualizado','ok');
+    } else { showToast('No se encontró el presupuesto','er'); return; }
+  } else {
+    // Save to history with anticipo payments
+    const version = document.getElementById('p-version')?.value||'v1';
+    // If version > v1, keep old version with suffix in num
+    if(version !== 'v1') {
+      const numBase = data.num;
+      const existingDoc = documents.find(d=>d.num===numBase&&d.type==='presupuesto');
+      if(existingDoc) {
+        const archivedNum = numBase + '-' + (existingDoc.version||'v1');
+        const archived = {...existingDoc, num: archivedNum, _archived: true};
+        documents.unshift(archived);
+      }
+      data.num = numBase.replace(/-v\d+$/,'') + '-' + version;
     }
-    data.num = numBase.replace(/-v\d+$/,'') + '-' + version;
+    data.version = version;
+    const item={...data, pagosAnticipo:[..._pPresAnticipo]};
+    saveToHistory(item);
+    showToast('✅ Presupuesto '+data.num+' guardado','ok');
   }
-  data.version = version;
-  const item={...data, pagosAnticipo:[..._pPresAnticipo]};
-  saveToHistory(item);
+
+  saveData('save_presupuesto', 'Presupuesto '+data.num+' — '+cliente);
   populateProyectoSelects();
   renderPresPendientes();
   renderProyectos();
+  renderHistory();
   updateDashboard();
-  // Find the auto-linked project to show in toast
-  const linkedProj = proyectos.find(p=>p.presRef===data.num);
-  showToast('✅ Presupuesto '+data.num+' guardado'+(linkedProj?' · Proyecto: '+linkedProj.codigo:''),'ok');
 }
 
 
@@ -8513,6 +8568,8 @@ function calcCuentas(gastosFiltrados) {
   const saldos = {};
   PAGADORES.forEach(function(a){ saldos[a]={}; PAGADORES.forEach(function(b){ saldos[a][b]=0; }); });
   gastosBase.forEach(function(g){
+    // Gastos personales (solo desgravo IVA) NO generan deuda de ObraNord hacia el socio
+    if(g.tipoGasto==='personal') return;
     const pagador = g.pagador||'ObraNord';
     const importe = g.total||0;
     if(pagador==='Agustín') { saldos['ObraNord']['Agustín'] += importe; }
@@ -8699,14 +8756,17 @@ function renderCuentas() {
   const kpiEl = document.getElementById('cuentas-kpis');
   if(kpiEl) {
     const colors = {'Agustín':'#1C2B3A','Franco':'#2D6A4F','ObraNord':'#C4A882'};
-    const gPP = function(p){ return gastosFiltrados.filter(function(g){return g.pagador===p;}).reduce(function(s,g){return s+g.total;},0); };
+    const gPP = function(p){ return gastosFiltrados.filter(function(g){return g.pagador===p;}).reduce(function(s,g){return s+(g.total||0);},0); };
+    const gPPersonal = function(p){ return gastosFiltrados.filter(function(g){return g.pagador===p&&g.tipoGasto==='personal';}).reduce(function(s,g){return s+(g.total||0);},0); };
     kpiEl.innerHTML = PAGADORES.map(function(p) {
       const debe = saldos['ObraNord'][p]||0;
+      const personal = gPPersonal(p);
       return '<div class="kcard" style="border-top-color:'+colors[p]+'">'
         +'<div class="klbl">'+(p==='ObraNord'?'🏢':'👤')+' '+p+'</div>'
         +'<div class="kval" style="font-size:20px">'+fmt(gPP(p))+'</div>'
-        +'<div class="ksub">Gastado en período'+(p!=='ObraNord'&&debe>0?' · ObraNord debe <strong style="color:var(--gold)">'+fmt(debe)+'</strong>':'')+'</div>'
-        +'</div>';
+        +'<div class="ksub">Gastado en período'+(p!=='ObraNord'&&debe>0?' · ObraNord debe <strong style="color:var(--gold)">'+fmt(debe)+'</strong>':'')
+        +(personal>0?'<br><span style="color:var(--slate);font-size:10px">🧾 incl. €'+personal.toFixed(2)+' personal (solo IVA, no genera deuda)</span>':'')
+        +'</div></div>';
     }).join('');
   }
 
@@ -9291,7 +9351,7 @@ const HEADERS = {
   'Tesorería':       ['ID','Tipo','Fecha','Medio','Concepto','Importe','Estado','Contraparte','Referencia'],
   'Contabilidad':    ['Período','Mes','Año','Facturas emitidas','Facturas cobradas','Gastos pagados','Margen bruto','IVA repercutido','IVA soportado','IVA neto a pagar','Nº facturas','Nº gastos'],
   'Clientes':        ['ID','Código','Nombre','NIF','Email','Teléfono','Dirección','Ciudad','Contacto','Notas','Fecha alta'],
-  'Proveedores':     ['Código','Nombre','Rubro','NIF','Email','Teléfono','Teléfono 2','Dirección','Web','Descripción'],
+  'Proveedores':     ['Código','Nombre','Rubro','NIF','Email','Teléfono','Teléfono 2','Dirección','Web','Descripción','Ciudad','CP'],
   'Cuentas internas':['Cuenta','Saldo','Última actualización'],
   '_raw':            ['Timestamp','Usuario','Versión','JSON completo'],
   'Auditoría':       ['Timestamp','Usuario','Acción','Colección','Entidad','Detalle'],
@@ -9604,7 +9664,9 @@ function writeProveedores(ss, proveedores) {
       p['TELEFONO 2'] || '',
       p['DIRECCION'] || '',
       p['WEB'] || '',
-      p['DESCRIPCION'] || ''
+      p['DESCRIPCION'] || '',
+      p['CIUDAD'] || '',
+      p['CP'] || ''
     ];
   });
   if (rows.length) sh.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
@@ -9886,6 +9948,27 @@ async function testSheetsConnection() {
     }
   } catch(e) {
     document.getElementById('sheets-test-result').innerHTML='<span style="color:var(--err)">❌ Error: '+e.message+'<br><small>Verifica que el Script esté desplegado con acceso "Cualquier persona"</small></span>';
+  }
+}
+
+async function forzarSincronizacion() {
+  if(!GAS_URL) { showToast('Configura primero la URL de Google Sheets','er'); return; }
+  showToast('⬆️ Subiendo todos los datos a Sheets...','');
+  const payload = getBackupPayload();
+  // Also persist to localStorage so nothing gets lost between syncs
+  localStorage.setItem('on_proveedores',JSON.stringify(PROVEEDORES));
+  localStorage.setItem('on_clientes',JSON.stringify(clientes));
+  localStorage.setItem('on_gastos',JSON.stringify(gastos));
+  localStorage.setItem('on_docs',JSON.stringify(documents));
+  localStorage.setItem('on_proyectos',JSON.stringify(proyectos));
+  localStorage.setItem('on_ordenes',JSON.stringify(ordenes));
+  localStorage.setItem('on_tesoreria',JSON.stringify(tesoreria));
+  localStorage.setItem('on_empresa',JSON.stringify(empresa));
+  const ok = await saveToSheets(payload);
+  if(ok) {
+    showToast('✅ Todo sincronizado: '+PROVEEDORES.length+' proveedores, '+clientes.length+' clientes, '+gastos.length+' gastos, '+documents.length+' documentos, '+proyectos.length+' proyectos','ok');
+  } else {
+    showToast('⚠️ Error al sincronizar — revisa la URL de Google Sheets','er');
   }
 }
 
@@ -10264,20 +10347,17 @@ function checkBackupWarning() {
 // NUMERACIÓN FISCAL — validación al guardar
 // ═══════════════════════════════════════════════════════
 function validateNumeracion(type, num) {
+  if(!num || !num.trim()) return {ok:false, msg:'Introduce un número de documento'};
   const prefix = {factura:'FAC',presupuesto:'PRE',proforma:'PRO',rectificativa:'RECT'}[type];
   if(!prefix) return {ok:true};
   const year = new Date().getFullYear();
-  if(!num.startsWith(prefix+'-'+year+'-')) return {ok:false, msg:`El número ${num} no sigue el formato ${prefix}-${year}-NNN`};
-  const numParts = num.split('-');
-  const n = parseInt(numParts[numParts.length-1]);
-  if(isNaN(n)||n<=0) return {ok:false, msg:'Número de serie inválido'};
-  // Check for duplicate — but allow if it's the same doc being edited
-  const dups = documents.filter(d=>d.num===num&&d.type===type&&!d._archived);
-  if(dups.length > 1) return {ok:false, msg:'Número duplicado: ya hay '+dups.length+' documentos con '+num};
-  // Check for gap
-  const existing = documents.filter(d=>d.type===type&&(d.num||'').startsWith(prefix+'-'+year+'-'));
-  const maxN = existing.reduce((mx,d)=>{const p=d.num.split('-');const nn=parseInt(p[p.length-1])||0;return Math.max(mx,nn);},0);
-  if(n > maxN+1) return {ok:false, msg:`Advertencia: saltas del ${maxN} al ${n}. ¿Es correcto?`, warn:true};
+  // Only warn (not block) if format doesn't match — user may use custom numbering
+  if(!num.startsWith(prefix+'-'+year+'-')) {
+    return {ok:false, msg:'El número '+num+' no sigue el formato recomendado '+prefix+'-'+year+'-NNN. ¿Continuar con este número?', warn:true};
+  }
+  // Check for real duplicates (more than 1 doc with same num and type, excluding archived)
+  const dups = documents.filter(function(d){return d.num===num && d.type===type && !d._archived;});
+  if(dups.length > 1) return {ok:false, msg:'Ya existe otro '+type+' con el número '+num};
   return {ok:true};
 }
 
@@ -10339,212 +10419,6 @@ function changePin(user) {
   showToast(`PIN de ${user} actualizado`,'ok');
   logAudit('change_pin','PIN cambiado para '+user);
 }
-
-// ═══════════════════════════════════════════════════════
-// v23 IMPROVEMENTS
-// ═══════════════════════════════════════════════════════
-
-// ── MEJORA 1+2: SYNC BADGE PERMANENTE + ALERTA FALLIDO ──────────────
-
-let _syncFailCount = 0;
-const SYNC_FAIL_THRESHOLD = 3;
-
-function updateSyncBadge(state) {
-  const dot  = document.getElementById('sync-dot');
-  const text = document.getElementById('sync-badge-text');
-  const badge = document.getElementById('sync-badge');
-  if (!dot || !text) return;
-  const cfg = {
-    ok:      { color:'var(--ok)',   bg:'rgba(45,106,79,.15)',  txt:'Sincronizado' },
-    syncing: { color:'var(--warn)', bg:'rgba(184,134,11,.15)', txt:'Guardando…'   },
-    error:   { color:'var(--err)',  bg:'rgba(193,18,31,.12)',  txt:'Sin sync'     },
-    local:   { color:'var(--slate)',bg:'rgba(255,255,255,.08)',txt:'Local'        },
-    polling: { color:'var(--warn)', bg:'rgba(184,134,11,.15)', txt:'Verificando…' },
-  };
-  const c = cfg[state] || cfg.local;
-  dot.style.background  = c.color;
-  text.textContent      = c.txt;
-  badge.style.background = c.bg;
-  badge.style.color      = c.color;
-
-  if (state === 'ok') {
-    _syncFailCount = 0;
-    document.getElementById('sync-error-banner').style.display = 'none';
-  }
-  if (state === 'error') {
-    _syncFailCount++;
-    if (_syncFailCount >= SYNC_FAIL_THRESHOLD) {
-      document.getElementById('sync-error-banner').style.display = 'block';
-    }
-  }
-}
-
-// Reemplazar la función setSyncStatus original para que también actualice el badge
-const _origSetSyncStatus = setSyncStatus;
-function setSyncStatus(s) {
-  // Mantener el elemento save-status por compatibilidad interna
-  const el = document.getElementById('save-status');
-  if(el) el.textContent = '';  // lo ocultamos, el badge hace su trabajo
-  _syncStatus = s;
-  updateSyncBadge(s);
-}
-
-async function retrySyncNow() {
-  _syncFailCount = 0;
-  document.getElementById('sync-error-banner').style.display = 'none';
-  showToast('🔄 Reintentando sincronización…', '');
-  const payload = getBackupPayload();
-  const ok = await saveToSheets(payload);
-  if(ok) showToast('✅ Sincronización restaurada','ok');
-  else   showToast('❌ Sync sigue fallando — revisa la URL del script','er');
-}
-
-// ── MEJORA 3: GRÁFICO DE BARRAS SVG ─────────────────────────────────
-
-function renderDashChart() {
-  const svg = document.getElementById('dash-chart-svg');
-  if(!svg) return;
-
-  const hoy = new Date();
-  const meses = [];
-  for(let i=5; i>=0; i--) {
-    const d = new Date(hoy.getFullYear(), hoy.getMonth()-i, 1);
-    meses.push({ year: d.getFullYear(), month: d.getMonth(), label: d.toLocaleString('es-ES',{month:'short'}) });
-  }
-
-  const data = meses.map(m => {
-    const facturado = documents
-      .filter(d => d.type==='factura' && new Date(d.fecha||'').getFullYear()===m.year && new Date(d.fecha||'').getMonth()===m.month)
-      .reduce((s,d)=>s+(d.total||0),0);
-    const gastado = gastos
-      .filter(g => g.estado!=='Anulado' && new Date(g.fecha||'').getFullYear()===m.year && new Date(g.fecha||'').getMonth()===m.month)
-      .reduce((s,g)=>s+(g.total||0),0);
-    return { label: m.label, facturado, gastado, beneficio: Math.max(0, facturado-gastado) };
-  });
-
-  const maxVal = Math.max(...data.map(d=>Math.max(d.facturado, d.gastado)), 1);
-  const W = svg.getBoundingClientRect().width || 600;
-  const H = 180;
-  const padL = 50, padR = 16, padT = 16, padB = 36;
-  const chartW = W - padL - padR;
-  const chartH = H - padT - padB;
-  const colW   = chartW / 6;
-  const barW   = colW * 0.22;
-
-  let html = '';
-
-  // Líneas de grid (3 horizontales)
-  for(let i=1; i<=3; i++) {
-    const y = padT + chartH - (chartH * i/3);
-    const v = Math.round(maxVal * i/3);
-    html += `<line x1="${padL}" x2="${W-padR}" y1="${y}" y2="${y}" stroke="#ECEAE5" stroke-width="1"/>`;
-    html += `<text x="${padL-6}" y="${y+4}" text-anchor="end" font-size="9" fill="#B0ADA6">€${v>999?Math.round(v/1000)+'k':v}</text>`;
-  }
-
-  // Barras
-  data.forEach((d, i) => {
-    const cx = padL + colW*i + colW/2;
-    const bh_fac  = d.facturado > 0 ? Math.max(3, (d.facturado/maxVal)*chartH) : 0;
-    const bh_gas  = d.gastado   > 0 ? Math.max(3, (d.gastado/maxVal)*chartH)   : 0;
-    const bh_ben  = d.beneficio > 0 ? Math.max(3, (d.beneficio/maxVal)*chartH) : 0;
-    const base = padT + chartH;
-
-    // Facturado (gold)
-    if(bh_fac) html += `<rect x="${cx-barW*1.6}" y="${base-bh_fac}" width="${barW}" height="${bh_fac}" rx="2" fill="#C4A882" opacity=".9">
-      <title>Facturado: €${d.facturado.toFixed(0)}</title></rect>`;
-    // Gastos (red)
-    if(bh_gas) html += `<rect x="${cx-barW*0.5}" y="${base-bh_gas}" width="${barW}" height="${bh_gas}" rx="2" fill="#C1121F" opacity=".75">
-      <title>Gastos: €${d.gastado.toFixed(0)}</title></rect>`;
-    // Beneficio (green)
-    if(bh_ben) html += `<rect x="${cx+barW*0.6}" y="${base-bh_ben}" width="${barW}" height="${bh_ben}" rx="2" fill="#2D6A4F" opacity=".85">
-      <title>Beneficio: €${d.beneficio.toFixed(0)}</title></rect>`;
-
-    // Label mes
-    html += `<text x="${cx}" y="${base+18}" text-anchor="middle" font-size="10" fill="#6B6860" font-weight="600">${d.label}</text>`;
-  });
-
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.innerHTML = html;
-}
-
-// ── MEJORA 4: BÚSQUEDA GLOBAL ────────────────────────────────────────
-
-function onGlobalSearch(q) {
-  const box = document.getElementById('global-search-results');
-  if(!box) return;
-  q = q.trim().toLowerCase();
-  if(q.length < 2) { box.innerHTML = ''; box.style.display='none'; return; }
-  box.style.display = 'block';
-
-  const results = [];
-
-  // Documentos
-  documents.filter(d=>(d.num||'').toLowerCase().includes(q)||(d.cliente||'').toLowerCase().includes(q)).slice(0,4).forEach(d=>{
-    const icon = {factura:'🧾',presupuesto:'📋',proforma:'📄',rectificativa:'↩️'}[d.type]||'📄';
-    results.push({icon, title: d.num||'Sin número', sub:`${d.type} · ${d.cliente||'—'} · €${(d.total||0).toFixed(0)}`, action:`showSec('historial')`});
-  });
-  // Clientes
-  clientes.filter(c=>(c.nombre||'').toLowerCase().includes(q)||(c.email||'').toLowerCase().includes(q)).slice(0,3).forEach(c=>{
-    results.push({icon:'👤', title:c.nombre, sub:`Cliente · ${c.email||c.tel||'—'}`, action:`showSec('clientes')`});
-  });
-  // Proyectos
-  proyectos.filter(p=>(p.nombre||'').toLowerCase().includes(q)||(p.clienteNombre||'').toLowerCase().includes(q)).slice(0,3).forEach(p=>{
-    results.push({icon:'🏗️', title:p.nombre, sub:`Proyecto · ${p.clienteNombre||'—'} · ${p.estado||'—'}`, action:`showSec('proyectos')`});
-  });
-  // Proveedores
-  PROVEEDORES.filter(p=>(p['NOMBRE SL']||'').toLowerCase().includes(q)||(p['RUBRO']||'').toLowerCase().includes(q)).slice(0,3).forEach(p=>{
-    results.push({icon:'🏭', title:p['NOMBRE SL'], sub:`Proveedor · ${p['RUBRO']||'—'} · ${p['TELEFONO']||'—'}`, action:`showSec('proveedores')`});
-  });
-
-  if(results.length===0) {
-    box.innerHTML = `<div style="padding:16px;text-align:center;color:var(--slate);font-size:13px">Sin resultados para "${escapeHtml(q)}"</div>`;
-    return;
-  }
-
-  box.innerHTML = results.map(r=>`
-    <div onclick="${r.action};document.getElementById('global-search-input').value='';document.getElementById('global-search-results').style.display='none'"
-      style="display:flex;gap:10px;align-items:center;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--g200)" 
-      onmouseover="this.style.background='var(--g100)'" onmouseout="this.style.background=''">
-      <span style="font-size:18px">${r.icon}</span>
-      <div><div style="font-size:13px;font-weight:600;color:var(--dark)">${escapeHtml(r.title)}</div>
-      <div style="font-size:11px;color:var(--slate)">${escapeHtml(r.sub)}</div></div>
-    </div>`).join('');
-}
-
-// Atajo teclado: Ctrl+K o Cmd+K para abrir búsqueda
-document.addEventListener('keydown', e => {
-  if((e.ctrlKey||e.metaKey) && e.key==='k') {
-    e.preventDefault();
-    const inp = document.getElementById('global-search-input');
-    if(inp) { inp.focus(); inp.select(); }
-  }
-});
-
-// ── INICIALIZACIÓN v23 ───────────────────────────────────────────────
-
-// Añadir estilos mobile para búsqueda global
-const v23Style = document.createElement('style');
-v23Style.textContent = `
-  @media(max-width:768px){
-    #global-search-wrap{display:none}
-    #sync-badge span:last-child{display:none}
-    #sync-badge{padding:5px 8px}
-  }
-  #global-search-input::placeholder{color:rgba(255,255,255,.45)}
-  #global-search-input:focus{border-color:rgba(196,168,130,.6)!important;background:rgba(255,255,255,.15)!important}
-`;
-document.head.appendChild(v23Style);
-
-// Re-render del gráfico cuando cambia el tamaño de la ventana
-window.addEventListener('resize', ()=>{ renderDashChart(); });
-
-// Hook en DOMContentLoaded original para añadir inicialización v23
-document.addEventListener('DOMContentLoaded', ()=>{
-  // Inicializar badge sync
-  updateSyncBadge(GAS_URL ? 'local' : 'local');
-  // Render inicial del gráfico tras un pequeño delay (espera al paint inicial)
-  setTimeout(renderDashChart, 800);
-}, {once:true});
 
 </script>
 </body>
