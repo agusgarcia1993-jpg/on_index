@@ -279,7 +279,7 @@ td.m{color:var(--slate);font-size:12px}
   <div style="margin-bottom:20px">
     <div class="slabel">Sistema</div>
     <div class="nav" onclick="showSec('sincronizar')"><span class="ni">🔄</span>Sincronizar Excel</div>
-    <div class="nav" onclick="openSheetsConfig()"><span class="ni">☁️</span>Google Sheets</div>
+    <div class="nav" onclick="openSheetsConfig()"><span class="ni">☁️</span>Supabase</div>
     <div class="nav" onclick="openAuditModal()"><span class="ni">📋</span>Auditoría</div>
     <div class="nav" onclick="showSec('empresa')"><span class="ni">⚙️</span>Mi empresa</div>
   </div>
@@ -2039,7 +2039,7 @@ td.m{color:var(--slate);font-size:12px}
 <!-- ═══ MODAL CONFIGURACIÓN SHEETS ═══ -->
 <div id="modal-sheets-config" class="modal-bg">
   <div class="modal-box" style="max-width:600px">
-    <div class="mhead"><h3>☁️ Configuración Google Sheets</h3><button class="mcls" onclick="document.getElementById('modal-sheets-config').classList.remove('open')">×</button></div>
+    <div class="mhead"><h3>☁️ Conexión Supabase</h3><button class="mcls" onclick="document.getElementById('modal-sheets-config').classList.remove('open')">×</button></div>
     <div class="mbody">
       <div style="background:rgba(196,168,130,.1);border:1px solid rgba(196,168,130,.3);border-radius:8px;padding:14px;margin-bottom:16px;font-size:13px;line-height:1.7">
         <strong style="color:var(--gold)">Instrucciones de configuración (5 minutos)</strong><br>
@@ -2515,14 +2515,54 @@ function confirmarBorrarFactura(docId) {
 // GOOGLE SHEETS BACKEND v2
 // ═══════════════════════════════════════════════════════
 let gastoRecurrentes = JSON.parse(localStorage.getItem('on_gastos_rec') || '[]');
-const GAS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbz4dUOGHaN1l8zlDg2OAHx3T32yURyXklukLNCMHrT08uuA3-TXTxr9BUafvwoFreBe/exec';
-let GAS_URL = localStorage.getItem('on_gas_url') || GAS_URL_DEFAULT;
+// ═══════════════════════════════════════════════════════
+// SUPABASE CONFIG
+// ═══════════════════════════════════════════════════════
+const SUPA_URL = 'https://igaevghfxqjikpbrnccq.supabase.co';
+const SUPA_KEY = 'sb_publishable_fEPnGvJbblRCodoxpF7t4w_9XWnLd1x';
+
+// Legacy GAS_URL kept as null so old code paths degrade gracefully
+const GAS_URL = null;
 let _saveQueue = null;
 let _pollInterval = null;
 let _syncStatus = 'local';
 let _lastRemoteSave = parseInt(localStorage.getItem('on_last_remote_save')||'0');
 let _pendingSync = false;
-let _currentUser = localStorage.getItem('on_current_user') || '';
+let _currentUser = localStorage.getItem('on_current_user') || 'Agustín';
+
+// ─── Supabase REST helpers ───────────────────────────────
+async function sbFetch(table, method, body, query) {
+  const url = SUPA_URL + '/rest/v1/' + table + (query||'');
+  const res = await fetch(url, {
+    method: method||'GET',
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': method==='POST' ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal'
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if(!res.ok) {
+    const err = await res.text();
+    throw new Error('Supabase ' + method + ' ' + table + ': ' + err);
+  }
+  if(method==='GET') return res.json();
+  return true;
+}
+
+async function sbUpsert(table, rows) {
+  if(!rows || !rows.length) return true;
+  // Batch in chunks of 200
+  for(let i=0; i<rows.length; i+=200) {
+    await sbFetch(table, 'POST', rows.slice(i,i+200));
+  }
+  return true;
+}
+
+async function sbDeleteAll(table) {
+  await sbFetch(table, 'DELETE', null, '?id=neq.___none___');
+}
 
 function setSyncStatus(s) {
   _syncStatus = s;
@@ -2531,7 +2571,7 @@ function setSyncStatus(s) {
   const icons = {
     local:   '',
     syncing: '🔄 Guardando…',
-    ok:      '☁️ Sheets OK',
+    ok:      '☁️ Supabase OK',
     error:   '',
     polling: '🔄 Comprobando…'
   };
@@ -2552,151 +2592,294 @@ function getBackupPayload() {
 }
 
 async function saveToSheets(payload) {
-  if(!GAS_URL) { setSyncStatus('local'); return false; }
-  try {
-    setSyncStatus('syncing');
-    const bodyObj = {action:'save', user:_currentUser||'unknown', data:payload};
-    const bodyStr = JSON.stringify(bodyObj);
-    console.log('[ObraNord Sheets] Enviando payload, tamaño:', bodyStr.length, 'chars');
-
-    // Si el payload es muy grande para GET (~6000 chars), usar chunked save
-    const encoded = encodeURIComponent(bodyStr);
-    if(encoded.length > 6000) {
-      console.log('[ObraNord Sheets] Payload grande — usando chunked JSONP');
-      return await saveToSheetsChunked(payload);
-    }
-
-    const json = await gasJSONP(GAS_URL + '?method=POST&payload=' + encoded);
-    if(json && json.status === 'ok') {
-      _lastRemoteSave = Date.now();
-      localStorage.setItem('on_last_remote_save', String(_lastRemoteSave));
-      _pendingSync = false;
-      setSyncStatus('ok');
-      console.log('[ObraNord Sheets] ✅ Guardado OK');
-      return true;
-    }
-    throw new Error((json && json.message) || 'respuesta inesperada del GAS');
-  } catch(e) {
-    setSyncStatus('local');
-    _pendingSync = true;
-    console.warn('[ObraNord Sheets] saveToSheets falló:', e.message);
-    return false;
-  }
+  return await saveToSupabase(payload);
 }
 
-// Guarda dividiendo el payload en partes para evitar el límite de URL GET
-async function saveToSheetsChunked(payload) {
-  try {
-    // Estrategia: guardar _raw con todo el JSON de una vez usando un iframe oculto
-    // que hace POST real (sin restricción de tamaño)
-    const bodyObj = {action:'save', user:_currentUser||'unknown', data:payload};
-    const bodyStr = JSON.stringify(bodyObj);
 
-    await new Promise(function(resolve, reject) {
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = GAS_URL;
-      form.target = '_gas_iframe_' + Date.now();
-      form.style.display = 'none';
-
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = 'payload';
-      input.value = bodyStr;
-      form.appendChild(input);
-
-      const iframe = document.createElement('iframe');
-      iframe.name = form.target;
-      iframe.style.display = 'none';
-      iframe.onload = function() {
-        setTimeout(function() {
-          iframe.remove();
-          form.remove();
-          resolve();
-        }, 500);
-      };
-      iframe.onerror = function() { iframe.remove(); form.remove(); reject(new Error('iframe error')); };
-
-      document.body.appendChild(iframe);
-      document.body.appendChild(form);
-      form.submit();
-    });
-
-    // Verificar con ping que llegó
-    await new Promise(r => setTimeout(r, 2000));
-    const ping = await gasJSONP(GAS_URL + '?action=ping');
-    if(ping && ping.status === 'ok') {
-      _lastRemoteSave = Date.now();
-      localStorage.setItem('on_last_remote_save', String(_lastRemoteSave));
-      _pendingSync = false;
-      setSyncStatus('ok');
-      console.log('[ObraNord Sheets] ✅ Guardado OK (chunked)');
-      return true;
-    }
-    throw new Error('ping falló tras chunked save');
-  } catch(e) {
-    setSyncStatus('local');
-    _pendingSync = true;
-    console.warn('[ObraNord Sheets] saveToSheetsChunked falló:', e.message);
-    return false;
-  }
-}
-
-function gasJSONP(url) {
-  return new Promise(function(resolve, reject) {
-    const cbName = '_gas_cb_' + Date.now();
-    const script = document.createElement('script');
-    const timeout = setTimeout(function() {
-      delete window[cbName];
-      script.remove();
-      reject(new Error('timeout'));
-    }, 10000);
-    window[cbName] = function(data) {
-      clearTimeout(timeout);
-      delete window[cbName];
-      script.remove();
-      resolve(data);
-    };
-    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName + '&t=' + Date.now();
-    script.onerror = function() {
-      clearTimeout(timeout);
-      delete window[cbName];
-      script.remove();
-      reject(new Error('script error'));
-    };
-    document.head.appendChild(script);
-  });
-}
 
 async function loadFromSheets() {
-  if(!GAS_URL) return null;
+  return await loadFromSupabase();
+}
+
+// Polling: comprueba updated_at de la tabla empresa como timestamp global
+async function pollSheetsVersion() {
+  try {
+    const rows = await sbFetch('empresa', 'GET', null, '?select=updated_at&limit=1');
+    if(!rows || !rows.length) return;
+    const remoteTs = new Date(rows[0].updated_at).getTime();
+    if(remoteTs > _lastRemoteSave + 15000) {
+      console.log('[ObraNord] Datos remotos más nuevos — recargando desde Supabase…');
+      const remote = await loadFromSupabase();
+      if(remote) applyRemoteData(remote, false);
+    }
+  } catch(e) { /* silencioso */ }
+}
+
+
+// ═══════════════════════════════════════════════════════
+// SUPABASE SAVE / LOAD
+// ═══════════════════════════════════════════════════════
+async function saveToSupabase(payload) {
   try {
     setSyncStatus('syncing');
-    const json = await gasJSONP(GAS_URL + '?action=load');
-    if(!json || json.status !== 'ok' || !json.data) throw new Error('sin datos en Sheets');
+
+    // 1. EMPRESA (single row upsert)
+    if(payload.empresa) {
+      const e = payload.empresa;
+      await sbUpsert('empresa', [{
+        id:'obranord', nombre:e.nombre||'', cif:e.cif||'', dir:e.dir||'',
+        email:e.email||'', tel:e.tel||'', web:e.web||'',
+        iban:e.iban||'', pie:e.pie||'', updated_at: new Date().toISOString()
+      }]);
+    }
+
+    // 2. CLIENTES
+    if(payload.clientes && payload.clientes.length) {
+      await sbUpsert('clientes', payload.clientes.map(function(c){ return {
+        id:String(c.id||c.codigo||Math.random()), codigo:c.codigo||'', nombre:c.nombre||'',
+        nif:c.nif||'', email:c.email||'', tel:c.tel||'', dir:c.dir||'',
+        ciudad:c.ciudad||'', contacto:c.contacto||'', notas:c.notas||'',
+        creado:c.creado||new Date().toISOString(), updated_at:new Date().toISOString()
+      }; }));
+    }
+
+    // 3. PROVEEDORES
+    if(payload.proveedores && payload.proveedores.length) {
+      await sbUpsert('proveedores', payload.proveedores.map(function(p){ return {
+        codigo:p['CODIGO PROVEEDOR']||p.codigo||('PROV-'+Math.random()),
+        nombre:p['NOMBRE SL']||p.nombre||'', rubro:p['RUBRO']||'',
+        nif:p['NIF']||'', email:p['EMAIL']||'',
+        telefono:p['TELEFONO']||'', telefono2:p['TELEFONO 2']||'',
+        direccion:p['DIRECCION']||'', web:p['WEB']||'',
+        descripcion:p['DESCRIPCION']||'', ciudad:p['CIUDAD']||'', cp:p['CP']||'',
+        updated_at:new Date().toISOString()
+      }; }));
+    }
+
+    // 4. PROYECTOS
+    if(payload.proyectos && payload.proyectos.length) {
+      await sbUpsert('proyectos', payload.proyectos.map(function(p){ return {
+        id:String(p.id||p.codigo), codigo:p.codigo||'', nombre:p.nombre||'',
+        cliente_id:String(p.clienteId||''), cliente_nombre:p.clienteNombre||'',
+        estado:p.estado||'Activo', inicio:p.inicio||'', fin:p.fin||'',
+        importe_pres:p.importePres||0, importe_fac:p.importeFac||0,
+        pres_ref:p.presRef||'', fac_ref:p.facRef||'', notas:p.notas||'',
+        pct_agustin:p.pctAgustin||50, pct_franco:p.pctFranco||50,
+        cofinanciadores:p.cofinanciadores||[], updated_at:new Date().toISOString()
+      }; }));
+    }
+
+    // 5. DOCUMENTOS
+    if(payload.documents && payload.documents.length) {
+      await sbUpsert('documentos', payload.documents.map(function(d){ return {
+        id:String(d.id), type:d.type||'', serie:d.serie||'A',
+        num:d.num||'', fecha:d.fecha||'', vencimiento:d.vencimiento||'',
+        cliente:d.cliente||'', nif_cliente:d.nifCliente||'',
+        dir_cliente:d.dirCliente||'', email_cliente:d.emailCliente||'',
+        obra:d.obra||'', medio_pago:d.medioPago||d.pago||'',
+        iban:d.iban||'', pres_ref:d.presRef||'', proy_cod:d.proyCod||'',
+        estado:d.estado||'', notas:d.notas||'',
+        sub:d.sub||0, iva:d.iva||0, iva_pct:d.ivaPct||21, total:d.total||0,
+        lines:d.lines||[], pagos:d.pagos||[], pagos_anticipo:d.pagosAnticipo||[],
+        rectifica_ref:d.rectificaRef||'',
+        _convertida:d._convertida||false, _archived:d._archived||false,
+        updated_at:new Date().toISOString()
+      }; }));
+    }
+
+    // 6. GASTOS
+    if(payload.gastos && payload.gastos.length) {
+      await sbUpsert('gastos', payload.gastos.map(function(g){ return {
+        id:String(g.id), fecha:g.fecha||'', cat:g.cat||'',
+        descripcion:g.desc||g.descripcion||'',
+        prov:g.prov||'', prov_cod:g.provCod||'', factura:g.factura||'',
+        importe:g.importe||0, iva_pct:g.ivaPct||21,
+        irpf_pct:g.irpfPct||0, retencion:g.retencion||0,
+        total:g.total||0, metodo:g.metodo||g.medio||'',
+        pagador:g.pagador||'ObraNord', estado:g.estado||'',
+        proy_cod:g.proyCod||'', notas:g.notas||'',
+        tipo_gasto:g.tipoGasto||'empresa', updated_at:new Date().toISOString()
+      }; }));
+    }
+
+    // 7. GASTOS RECURRENTES
+    if(payload.gastoRecurrentes && payload.gastoRecurrentes.length) {
+      await sbUpsert('gastos_recurrentes', payload.gastoRecurrentes.map(function(g){ return {
+        id:String(g.id||Math.random()), descripcion:g.desc||g.descripcion||'',
+        cat:g.cat||'', prov:g.prov||'', importe:g.importe||0,
+        iva_pct:g.ivaPct||21, total:g.total||0, metodo:g.metodo||'',
+        pagador:g.pagador||'', dia_mes:g.diaMes||1, activo:g.activo!==false,
+        updated_at:new Date().toISOString()
+      }; }));
+    }
+
+    // 8. ORDENES
+    if(payload.ordenes && payload.ordenes.length) {
+      await sbUpsert('ordenes', payload.ordenes.map(function(o){ return {
+        id:String(o.id), num:o.num||'', proy_cod:o.proyCod||'',
+        proveedor:o.proveedor||'', descripcion:o.desc||o.descripcion||'',
+        coste:o.coste||0, estado:o.estado||'Pendiente',
+        fecha:o.fecha||'', notas:o.notas||'',
+        pago_proveedor:o.pagoProveedor||'',
+        pagos_proveedor:o.pagosProveedor||[], updated_at:new Date().toISOString()
+      }; }));
+    }
+
+    // 9. TESORERIA
+    if(payload.tesoreria && payload.tesoreria.length) {
+      await sbUpsert('tesoreria', payload.tesoreria.map(function(t){ return {
+        id:String(t.id), tipo:t.tipo||'', fecha:t.fecha||'',
+        medio:t.medio||'', concepto:t.concepto||'',
+        importe:t.importe||0, estado:t.estado||'',
+        contraparte:t.contraparte||'', ref:t.ref||'',
+        proy_cod:t.proyCod||'', doc_id:t._docId||t.docId||'',
+        auto_pendiente:t._autoPendiente||false, updated_at:new Date().toISOString()
+      }; }));
+    }
+
+    // 10. TAREAS
+    if(payload.tareas && payload.tareas.length) {
+      await sbUpsert('tareas', payload.tareas.map(function(t){ return {
+        id:String(t.id), titulo:t.titulo||'', descripcion:t.desc||t.descripcion||'',
+        estado:t.estado||'', prioridad:t.prioridad||'',
+        fecha_limite:t.fechaLimite||t.fecha_limite||'',
+        asignado:t.asignado||'', proy_cod:t.proyCod||'',
+        updated_at:new Date().toISOString()
+      }; }));
+    }
+
+    // 11. EVENTOS
+    if(payload.eventos && payload.eventos.length) {
+      await sbUpsert('eventos', payload.eventos.map(function(ev){ return {
+        id:String(ev.id), titulo:ev.titulo||'', fecha:ev.fecha||'',
+        hora:ev.hora||'', tipo:ev.tipo||'', proy_cod:ev.proyCod||'',
+        notas:ev.notas||'', updated_at:new Date().toISOString()
+      }; }));
+    }
+
+    // 12. OBJETIVOS
+    if(payload.objetivos && payload.objetivos.length) {
+      await sbUpsert('objetivos', payload.objetivos.map(function(o){ return {
+        id:String(o.id||o.anio), anio:o.anio||new Date().getFullYear(),
+        objetivo_anual:o.objetivo||o.objetivo_anual||150000,
+        updated_at:new Date().toISOString()
+      }; }));
+    }
+
+    _lastRemoteSave = Date.now();
+    localStorage.setItem('on_last_remote_save', String(_lastRemoteSave));
+    _pendingSync = false;
     setSyncStatus('ok');
-    return json.data;
+    console.log('[ObraNord Supabase] ✅ Guardado OK');
+    return true;
   } catch(e) {
     setSyncStatus('local');
-    console.warn('[ObraNord Sheets] loadFromSheets falló:', e.message);
-    return null;
+    _pendingSync = true;
+    console.error('[ObraNord Supabase] saveToSupabase falló:', e.message);
+    return false;
   }
 }
 
-// Polling ligero: solo pide el timestamp, no el JSON completo
-async function pollSheetsVersion() {
-  if(!GAS_URL) return;
+async function loadFromSupabase() {
   try {
-    const json = await gasJSONP(GAS_URL + '?action=ping');
-    if(!json || json.status !== 'ok') return;
-    const remoteVersion = json.version || 0;
-    if(remoteVersion > _lastRemoteSave + 20000) {
-      console.log('[ObraNord Polling] Versión remota más nueva — cargando desde Sheets…');
-      const remote = await loadFromSheets();
-      if(remote) applyRemoteData(remote, false);
-    }
+    setSyncStatus('syncing');
+    const [
+      empRows, cliRows, provRows, proyRows, docRows,
+      gasRows, grRows, ordRows, tesRows, tarRows, evRows, objRows
+    ] = await Promise.all([
+      sbFetch('empresa','GET',null,'?limit=1'),
+      sbFetch('clientes','GET',null,'?select=*&order=updated_at.desc'),
+      sbFetch('proveedores','GET',null,'?select=*'),
+      sbFetch('proyectos','GET',null,'?select=*&order=updated_at.desc'),
+      sbFetch('documentos','GET',null,'?select=*&order=updated_at.desc'),
+      sbFetch('gastos','GET',null,'?select=*&order=fecha.desc'),
+      sbFetch('gastos_recurrentes','GET',null,'?select=*'),
+      sbFetch('ordenes','GET',null,'?select=*&order=updated_at.desc'),
+      sbFetch('tesoreria','GET',null,'?select=*&order=fecha.desc'),
+      sbFetch('tareas','GET',null,'?select=*'),
+      sbFetch('eventos','GET',null,'?select=*'),
+      sbFetch('objetivos','GET',null,'?select=*'),
+    ]);
+
+    // Map DB rows back to ERP format
+    const remote = {
+      empresa: empRows && empRows.length ? empRows[0] : null,
+      clientes: (cliRows||[]).map(function(c){ return Object.assign({},c,{id:c.id}); }),
+      proveedores: (provRows||[]).map(function(p){ return {
+        'CODIGO PROVEEDOR':p.codigo, 'NOMBRE SL':p.nombre, 'RUBRO':p.rubro,
+        'NIF':p.nif, 'EMAIL':p.email, 'TELEFONO':p.telefono, 'TELEFONO 2':p.telefono2,
+        'DIRECCION':p.direccion, 'WEB':p.web, 'DESCRIPCION':p.descripcion,
+        'CIUDAD':p.ciudad, 'CP':p.cp
+      }; }),
+      proyectos: (proyRows||[]).map(function(p){ return {
+        id:p.id, codigo:p.codigo, nombre:p.nombre,
+        clienteId:p.cliente_id, clienteNombre:p.cliente_nombre,
+        estado:p.estado, inicio:p.inicio, fin:p.fin,
+        importePres:p.importe_pres, importeFac:p.importe_fac,
+        presRef:p.pres_ref, facRef:p.fac_ref, notas:p.notas,
+        pctAgustin:p.pct_agustin, pctFranco:p.pct_franco,
+        cofinanciadores:p.cofinanciadores||[]
+      }; }),
+      documents: (docRows||[]).map(function(d){ return {
+        id:d.id, type:(d.type||'').toLowerCase(), serie:d.serie||'A',
+        num:d.num, fecha:d.fecha, vencimiento:d.vencimiento,
+        cliente:d.cliente, nifCliente:d.nif_cliente,
+        dirCliente:d.dir_cliente, emailCliente:d.email_cliente,
+        obra:d.obra, medioPago:d.medio_pago, pago:d.medio_pago,
+        iban:d.iban, presRef:d.pres_ref, proyCod:d.proy_cod,
+        estado:d.estado, notas:d.notas,
+        sub:d.sub, iva:d.iva, ivaPct:d.iva_pct, total:d.total,
+        lines:d.lines||[], pagos:d.pagos||[], pagosAnticipo:d.pagos_anticipo||[],
+        rectificaRef:d.rectifica_ref, _convertida:d._convertida, _archived:d._archived
+      }; }),
+      gastos: (gasRows||[]).map(function(g){ return {
+        id:g.id, fecha:g.fecha, cat:g.cat, desc:g.descripcion,
+        prov:g.prov, provCod:g.prov_cod, factura:g.factura,
+        importe:g.importe, ivaPct:g.iva_pct, irpfPct:g.irpf_pct,
+        retencion:g.retencion, total:g.total, metodo:g.metodo,
+        pagador:g.pagador, estado:g.estado, proyCod:g.proy_cod,
+        notas:g.notas, tipoGasto:g.tipo_gasto||'empresa'
+      }; }),
+      gastoRecurrentes: (grRows||[]).map(function(g){ return {
+        id:g.id, desc:g.descripcion, cat:g.cat, prov:g.prov,
+        importe:g.importe, ivaPct:g.iva_pct, total:g.total,
+        metodo:g.metodo, pagador:g.pagador, diaMes:g.dia_mes, activo:g.activo
+      }; }),
+      ordenes: (ordRows||[]).map(function(o){ return {
+        id:o.id, num:o.num, proyCod:o.proy_cod, proveedor:o.proveedor,
+        desc:o.descripcion, coste:o.coste, estado:o.estado,
+        fecha:o.fecha, notas:o.notas,
+        pagoProveedor:o.pago_proveedor, pagosProveedor:o.pagos_proveedor||[]
+      }; }),
+      tesoreria: (tesRows||[]).map(function(t){ return {
+        id:t.id, tipo:t.tipo, fecha:t.fecha, medio:t.medio,
+        concepto:t.concepto, importe:t.importe, estado:t.estado,
+        contraparte:t.contraparte, ref:t.ref, proyCod:t.proy_cod,
+        _docId:t.doc_id, _autoPendiente:t.auto_pendiente
+      }; }),
+      tareas: (tarRows||[]).map(function(t){ return {
+        id:t.id, titulo:t.titulo, desc:t.descripcion,
+        estado:t.estado, prioridad:t.prioridad,
+        fechaLimite:t.fecha_limite, asignado:t.asignado, proyCod:t.proy_cod
+      }; }),
+      eventos: (evRows||[]).map(function(ev){ return {
+        id:ev.id, titulo:ev.titulo, fecha:ev.fecha, hora:ev.hora,
+        tipo:ev.tipo, proyCod:ev.proy_cod, notas:ev.notas
+      }; }),
+      objetivos: (objRows||[]).map(function(o){ return {
+        id:o.id, anio:o.anio, objetivo:o.objetivo_anual
+      }; })
+    };
+
+    _lastRemoteSave = Date.now();
+    localStorage.setItem('on_last_remote_save', String(_lastRemoteSave));
+    setSyncStatus('ok');
+    console.log('[ObraNord Supabase] ✅ Cargado OK');
+    return remote;
   } catch(e) {
-    // Silencioso
+    setSyncStatus('local');
+    console.error('[ObraNord Supabase] loadFromSupabase falló:', e.message);
+    return null;
   }
 }
 
@@ -2784,13 +2967,9 @@ function saveData(auditAction, auditDetail) {
     localStorage.setItem('on_proveedores',JSON.stringify(PROVEEDORES));
     localStorage.setItem('on_gasto_recurrentes',JSON.stringify(gastoRecurrentes));
     if(auditAction) logAudit(auditAction, auditDetail||'');
-    if(GAS_URL){
-      if(_saveQueue) clearTimeout(_saveQueue);
-      _saveQueue=setTimeout(()=>saveToSheets(payload),1500);
-    } else {
-      const s=document.getElementById('save-status');
-      if(s){s.textContent='✓ Local';s.style.color='var(--slate)';setTimeout(()=>{if(s&&s.textContent.startsWith('✓'))s.textContent='';},2000);}
-    }
+    // Auto-sync to Supabase (debounced 1.5s)
+    if(_saveQueue) clearTimeout(_saveQueue);
+    _saveQueue = setTimeout(function(){ saveToSupabase(getBackupPayload()); }, 1500);
   } catch(e) {
     showToast('⚠️ Almacenamiento lleno — exporta un backup','er');
   }
@@ -2896,7 +3075,7 @@ function showSec(id) {
   if (id==='clientes') renderClientes();
   if (id==='proyectos') renderProyectos();
   if (id==='tesoreria') renderTesoreria();
-  if (id==='empresa') { renderObjetivos(); const el=document.getElementById('sheets-status-empresa'); if(el) el.textContent=GAS_URL?'☁️ Configurado':'⚠️ No configurado — solo local'; }
+  if (id==='empresa') { renderObjetivos(); const el=document.getElementById('sheets-status-empresa'); if(el) el.textContent='☁️ Supabase activo'; }
   if (id==='dashboard') { checkAlerts(); }
   if (id==='cuentas') renderCuentas();
   if (id==='contabilidad') renderContabilidad();
@@ -9453,7 +9632,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // Sheets: auto-sync al arrancar + polling cada 60s
   if(GAS_URL) {
     setTimeout(async()=>{
-      const remote = await loadFromSheets();
+      const remote = await loadFromSupabase();
       if(remote && remote.fecha) {
         const remoteTs = new Date(remote.fecha).getTime();
         const localTs = _lastRemoteSave || 0;
@@ -10129,12 +10308,14 @@ function roundN(n) {
 
 function openSheetsConfig() {
   document.getElementById('modal-sheets-config').classList.add('open');
-  document.getElementById('sheets-url-input').value = GAS_URL || '';
-  document.getElementById('gas-code-preview').value = GAS_SCRIPT_CODE;
+  const urlEl = document.getElementById('sheets-url-input');
+  if(urlEl) urlEl.value = SUPA_URL;
+  const previewEl = document.getElementById('gas-code-preview');
+  if(previewEl) previewEl.value = 'Supabase URL: '+SUPA_URL+'\nPublishable Key: '+SUPA_KEY;
 }
 
 function saveSheetsConfig() {
-  const url = document.getElementById('sheets-url-input').value.trim();
+  const url = SUPA_URL; // Supabase URL is hardcoded
   GAS_URL = url || GAS_URL_DEFAULT;
   localStorage.setItem('on_gas_url', url);
   document.getElementById('modal-sheets-config').classList.remove('open');
@@ -10159,10 +10340,8 @@ async function testSheetsConnection() {
 }
 
 async function forzarSincronizacion() {
-  if(!GAS_URL) { showToast('Configura primero la URL de Google Sheets','er'); return; }
-  showToast('⬆️ Subiendo todos los datos a Sheets...','');
-  const payload = getBackupPayload();
-  // Also persist to localStorage so nothing gets lost between syncs
+  showToast('⬆️ Subiendo todo a Supabase...','');
+  // Persist to localStorage first
   localStorage.setItem('on_proveedores',JSON.stringify(PROVEEDORES));
   localStorage.setItem('on_clientes',JSON.stringify(clientes));
   localStorage.setItem('on_gastos',JSON.stringify(gastos));
@@ -10171,43 +10350,29 @@ async function forzarSincronizacion() {
   localStorage.setItem('on_ordenes',JSON.stringify(ordenes));
   localStorage.setItem('on_tesoreria',JSON.stringify(tesoreria));
   localStorage.setItem('on_empresa',JSON.stringify(empresa));
-  const ok = await saveToSheets(payload);
+  const payload = getBackupPayload();
+  const ok = await saveToSupabase(payload);
   if(ok) {
-    showToast('✅ Todo sincronizado: '+PROVEEDORES.length+' proveedores, '+clientes.length+' clientes, '+gastos.length+' gastos, '+documents.length+' documentos, '+proyectos.length+' proyectos','ok');
+    showToast('✅ Supabase sincronizado — '+PROVEEDORES.length+' proveedores · '+clientes.length+' clientes · '+gastos.length+' gastos · '+documents.length+' documentos · '+proyectos.length+' proyectos','ok');
   } else {
-    showToast('⚠️ Error al sincronizar — revisa la URL de Google Sheets','er');
+    showToast('⚠️ Error al sincronizar con Supabase — revisa la conexión','er');
   }
 }
 
 async function syncFromSheets() {
-  const url = document.getElementById('sheets-url-input').value.trim() || GAS_URL;
-  if(!url){showToast('Configura la URL primero','er');return;}
-  document.getElementById('sheets-test-result').innerHTML='🔄 Cargando datos desde Sheets…';
+  const resEl = document.getElementById('sheets-test-result');
+  if(resEl) resEl.innerHTML='🔄 Cargando datos desde Supabase…';
   try {
-    const json = await gasJSONP(url+'?action=load');
-    if(json.status!=='ok'||!json.data){document.getElementById('sheets-test-result').innerHTML='<span style="color:var(--err)">Sin datos en Sheets todavía</span>';return;}
-    const b = json.data;
-    const localDate = new Date(_lastRemoteSave||0);
-    const remoteDate = new Date(b.fecha||0);
-    const msg = '¿Cargar datos de Sheets?\n\nFecha remota: '+b.fecha+'\nFecha local:   '+localDate.toISOString()+'\n\nEsto sobreescribirá los datos locales.';
-    if(!confirm(msg)) return;
-    if(b.gastos) gastos=b.gastos;
-    if(b.documents) documents=b.documents;
-    if(b.clientes) clientes=b.clientes;
-    if(b.proyectos) proyectos=b.proyectos;
-    if(b.tesoreria) tesoreria=b.tesoreria;
-    if(b.objetivos) objetivos=b.objetivos;
-    if(b.empresa) empresa=b.empresa;
-    if(b.tareas) tareas=b.tareas;
-    if(b.ordenes) ordenes=b.ordenes;
-    if(b.eventos) { eventos=b.eventos; localStorage.setItem('on_eventos',JSON.stringify(eventos)); }
-    if(b.proveedores) PROVEEDORES=b.proveedores;
-    saveData('sync','Carga manual desde Google Sheets');
+    const remote = await loadFromSupabase();
+    if(!remote){if(resEl) resEl.innerHTML='<span style="color:var(--err)">Sin datos en Supabase todavía — sube primero con ⬆️ Sincronizar</span>';return;}
+    if(!confirm('¿Cargar datos desde Supabase?\n\nEsto sobreescribirá los datos locales.')) return;
+    applyRemoteData(remote, false);
+    saveData('sync_supa','Carga manual desde Supabase');
     updateDashboard(); renderHistory(); renderClientes(); renderProyectos(); renderGastos(); renderTesoreria();
     populateClienteSelects(); populateProyectoSelects();
     document.getElementById('modal-sheets-config').classList.remove('open');
-    showToast('✅ Datos cargados desde Google Sheets','ok');
-    logAudit('sync_load','Datos sincronizados desde Sheets por '+_currentUser);
+    showToast('✅ Datos cargados desde Supabase','ok');
+    logAudit('sync_load','Datos sincronizados desde Supabase por '+_currentUser);
   } catch(e) {
     document.getElementById('sheets-test-result').innerHTML='<span style="color:var(--err)">❌ '+e.message+'</span>';
   }
