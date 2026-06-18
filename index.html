@@ -495,7 +495,13 @@ td.m{color:var(--slate);font-size:12px}
     <div class="card"><div class="ctitle">🔢 Numeración</div>
       <div class="fg fg4">
         <input type="hidden" id="f-edit-id" value="">
-        <div class="fgrp"><label class="flbl">Nº Factura</label><input id="f-num" class="fc" placeholder="FAC-2026-001"></div>
+        <div class="fgrp"><label class="flbl">Serie</label>
+          <select id="f-serie" class="fc" onchange="onFSerieChange()" title="Serie A: Reformas · Serie B: Honorarios/Gestión Inmobiliaria">
+            <option value="A">Serie A — Reformas</option>
+            <option value="B">Serie B — Honorarios / Gestión Inmobiliaria</option>
+          </select>
+        </div>
+        <div class="fgrp"><label class="flbl">Nº Factura</label><input id="f-num" class="fc" placeholder="A-2026-001"></div>
         <div class="fgrp"><label class="flbl">Fecha emisión</label><input id="f-fecha" class="fc" type="date"></div>
         <div class="fgrp"><label class="flbl">Vencimiento</label><input id="f-vencimiento" class="fc" type="date"></div>
         <div class="fgrp"><label class="flbl">Método de pago</label><select id="f-pago" class="fc"><option>Transferencia bancaria</option><option>Efectivo</option><option>Bizum</option><option>Tarjeta</option></select></div>
@@ -2838,18 +2844,33 @@ function importBackupJSON(input) {
 }
 
 
-function getNextDocNum(type) {
-  const prefixMap = {presupuesto:'PRE', factura:'FAC', proforma:'PRO', rectificativa:'RECT'};
-  const prefix = prefixMap[type] || 'FAC';
+function getNextDocNum(type, serie) {
   const year = new Date().getFullYear();
-  const existing = documents.filter(d => d.type === type && (d.num||'').includes(prefix+'-'+year));
-  if(!existing.length) return prefix + '-' + year + '-001';
-  const nums = existing.map(d => {
-    const parts = (d.num||'').split('-');
-    return parseInt(parts[parts.length-1]) || 0;
+  if(type === 'factura') {
+    // Serie A = Reformas, Serie B = Honorarios/Gestión Inmobiliaria
+    const s = serie || 'A';
+    const prefix = s + '-' + year;
+    const existing = documents.filter(function(d){
+      return d.type==='factura' && (d.num||'').startsWith(prefix+'-');
+    });
+    if(!existing.length) return prefix + '-001';
+    const nums = existing.map(function(d){
+      const parts=(d.num||'').split('-');
+      return parseInt(parts[parts.length-1])||0;
+    });
+    return prefix + '-' + String(Math.max.apply(null,nums)+1).padStart(3,'0');
+  }
+  const prefixMap = {presupuesto:'PRE', proforma:'PRO', rectificativa:'RECT'};
+  const prefix = (prefixMap[type]||'DOC') + '-' + year;
+  const existing = documents.filter(function(d){
+    return d.type===type && (d.num||'').startsWith(prefixMap[type]||'DOC');
   });
-  const next = Math.max(...nums) + 1;
-  return prefix + '-' + year + '-' + String(next).padStart(3,'0');
+  if(!existing.length) return prefix + '-001';
+  const nums = existing.map(function(d){
+    const parts=(d.num||'').split('-');
+    return parseInt(parts[parts.length-1])||0;
+  });
+  return prefix + '-' + String(Math.max.apply(null,nums)+1).padStart(3,'0');
 }
 // ═══════════════════════════════════════════════════════
 // NAV
@@ -2881,7 +2902,8 @@ function showSec(id) {
   if (id==='contabilidad') renderContabilidad();
   if (id==='nuevo-presupuesto') { const n=document.getElementById('p-num'); if(n) n.value=getNextDocNum('presupuesto'); const eid=document.getElementById('p-edit-id');if(eid)eid.value=''; populateClienteSelects(); populateProyectoSelects(); }
   if (id==='nueva-factura') {
-    const n=document.getElementById('f-num'); if(n) n.value=getNextDocNum('factura');
+    const serie = document.getElementById('f-serie')?.value||'A';
+    const n=document.getElementById('f-num'); if(n) n.value=getNextDocNum('factura', serie);
     const eid=document.getElementById('f-edit-id');if(eid)eid.value='';
     const fe=document.getElementById('f-estado');if(fe)fe.value='Pendiente de cobro';
     const fr=document.getElementById('f-resumen-importe');if(fr){fr.style.display='none';fr.innerHTML='';}
@@ -3225,6 +3247,20 @@ function toggleTipoGasto(tipo) {
     const cat = document.getElementById('g-cat');
     if(cat) cat.value='Personal IVA';
   }
+}
+
+function onFSerieChange() {
+  const serie = document.getElementById('f-serie')?.value||'A';
+  const numEl = document.getElementById('f-num');
+  // Only auto-update if edit mode is empty (new factura) or num matches old serie pattern
+  const editId = document.getElementById('f-edit-id')?.value||'';
+  if(!editId && numEl) numEl.value = getNextDocNum('factura', serie);
+}
+
+function getSerieFromNum(num) {
+  if(!num) return 'A';
+  if(num.startsWith('B-')) return 'B';
+  return 'A';
 }
 
 function onGastoCatChange() {
@@ -3866,11 +3902,13 @@ function renderHistory() {
     var iva  = d.iva!=null ? d.iva.toFixed(2)  : d.total ? (d.total-d.total/1.21).toFixed(2) : '0.00';
     var estadoOpts = ['Aprobado','Rechazado','En curso','Cobrado','Parcialmente cobrado','Pendiente de cobro','Pendiente de aprobación','Cancelado']
       .map(function(o){ return '<option value="'+o+'"'+(d.estado===o?' selected':'')+'>'+o+'</option>'; }).join('');
-    var tipoLabel2 = {presupuesto:'Presupuesto',factura:'Factura',proforma:'Proforma',rectificativa:'Rectificativa',orden:'OT'}[d.type]||d.type||'—';
+    var serieDoc = d.type==='factura' ? (d.serie||getSerieFromNum(d.num)||'A') : '';
+    var tipoLabel2 = {presupuesto:'Presupuesto',factura:'Factura '+serieDoc,proforma:'Proforma',rectificativa:'Rectificativa',orden:'OT'}[d.type]||d.type||'—';
     var tipoBadge  = {factura:'bsuc',rectificativa:'berr',proforma:'bwrn',presupuesto:'bblu',orden:'bwrn'}[d.type]||'bgry';
+    var serieBadge = serieDoc ? ' <span style="background:'+(serieDoc==='B'?'#7B5EA7':'var(--navy)')+'22;color:'+(serieDoc==='B'?'#7B5EA7':'var(--navy)')+';border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700">SERIE '+serieDoc+'</span>' : '';
     var tipoCell   = d.type==='orden'
       ? '<span class="badge '+tipoBadge+'" style="cursor:pointer" onclick="showSec(\'ordenes\')" title="Ver OTs">🔧 '+escapeHtml(tipoLabel2)+'</span>'
-      : '<span class="badge '+tipoBadge+'">'+({presupuesto:'📋',factura:'🧾',proforma:'📄',rectificativa:'↩️'}[d.type]||'📄')+' '+escapeHtml(tipoLabel2)+'</span>';
+      : '<span class="badge '+tipoBadge+'">'+({presupuesto:'📋',factura:'🧾',proforma:'📄',rectificativa:'↩️'}[d.type]||'📄')+' '+escapeHtml(tipoLabel2)+'</span>'+serieBadge;
     var numCell = d.type==='proforma'
       ? '<strong>'+escapeHtml(d.num||'')+'</strong><br><span style="font-size:9px;color:var(--warn);font-weight:700">SIN VALOR FISCAL</span>'
       : (d.type==='rectificativa'&&d.rectificaRef)
@@ -5794,6 +5832,7 @@ function getDocData(type) {
     nifCliente: document.getElementById('f-nif')?.value||'',
     dirCliente: document.getElementById('f-dir')?.value||'',
     emailCliente: document.getElementById('f-email')?.value||'',
+    serie: document.getElementById('f-serie')?.value||'A',
     pago: document.getElementById('f-pago')?.value||'',
     medioPago: document.getElementById('f-pago')?.value||'',
     iban: document.getElementById('f-iban')?.value||'',
@@ -6779,7 +6818,8 @@ function guardarFactura() {
         obra:data.obra, medioPago:data.medioPago, ivaPct:data.ivaPct,
         sub:data.sub, iva:data.iva, total:data.total,
         lines:data.lines, notas:data.notas, proyCod:data.proyCod, iban:data.iban,
-        estado: data.estado || existing.estado
+        estado: data.estado || existing.estado,
+        serie: data.serie || existing.serie || 'A'
         // Preserved: id, type, pagos, pagosAnticipo, _convertida
       });
       const eid=document.getElementById('f-edit-id');if(eid)eid.value='';
@@ -6945,6 +6985,7 @@ function editarFacturaDesdeHistorial(docId) {
     const sv=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v||'';};
     populateClienteSelects(); populateProyectoSelects();
     const editIdEl=document.getElementById('f-edit-id');if(editIdEl)editIdEl.value=doc.id;
+    const serieEl=document.getElementById('f-serie');if(serieEl)serieEl.value=getSerieFromNum(doc.num);
     sv('f-num',doc.num);
     sv('f-fecha',doc.fecha);
     sv('f-vencimiento',doc.vencimiento);
@@ -10517,8 +10558,11 @@ function validateNumeracion(type, num) {
   const prefix = {factura:'FAC',presupuesto:'PRE',proforma:'PRO',rectificativa:'RECT'}[type];
   if(!prefix) return {ok:true};
   const year = new Date().getFullYear();
-  // Only warn (not block) if format doesn't match — user may use custom numbering
-  if(!num.startsWith(prefix+'-'+year+'-')) {
+  // Facturas accept Serie A or Serie B format
+  if(type==='factura') {
+    const okFmt = (num.startsWith('A-'+year+'-') || num.startsWith('B-'+year+'-'));
+    if(!okFmt) return {ok:false, msg:'El número '+num+' no sigue el formato de serie A-'+year+'-NNN o B-'+year+'-NNN. ¿Continuar?', warn:true};
+  } else if(!num.startsWith(prefix+'-'+year+'-')) {
     return {ok:false, msg:'El número '+num+' no sigue el formato recomendado '+prefix+'-'+year+'-NNN. ¿Continuar con este número?', warn:true};
   }
   // Check for real duplicates (more than 1 doc with same num and type, excluding archived)
