@@ -229,12 +229,30 @@ td.m{color:var(--slate);font-size:12px}
     <div class="logo-icon">ON</div>
     <div>ObraNord <div class="logo-sub">ERP v2.0</div></div>
   </div>
+
+  <div class="topbar-search" style="flex:1;max-width:480px;margin:0 16px;position:relative">
+    <input id="global-search-input" class="fc" placeholder="🔍 Buscar cliente, proyecto, factura..."
+      style="width:100%;padding:8px 14px;font-size:13px"
+      oninput="globalSearch(this.value)"
+      onfocus="if(this.value)globalSearch(this.value)"
+      onblur="setTimeout(()=>{const r=document.getElementById('global-search-results');if(r)r.style.display='none';},200)">
+    <div id="global-search-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--g200);border-radius:10px;margin-top:4px;max-height:420px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:500"></div>
+  </div>
+
   <div class="topbar-right" style="display:flex;align-items:center;gap:10px">
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--slate);padding:4px 10px;background:var(--g100);border-radius:20px" title="Estado de conexión con Supabase">
+      <span id="conn-dot" style="width:8px;height:8px;border-radius:50%;background:#8FA3B4;display:inline-block;transition:background .3s"></span>
+      <span id="conn-label">Conectando…</span>
+    </div>
     <span style="font-size:12px;color:var(--slate)" id="save-status"></span>
     <span class="badge-ver">v22.0 · Barcelona 2026</span>
     <button id="mob-menu-btn" style="display:none" onclick="toggleMobileMenu()" aria-label="Menú">☰</button>
   </div>
 </div>
+<style>
+@keyframes connPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+@media (max-width: 768px) { .topbar-search { display:none; } }
+</style>
 
 <div class="shell">
 <nav class="sidebar">
@@ -1138,6 +1156,10 @@ td.m{color:var(--slate);font-size:12px}
   <div class="card" style="margin-bottom:18px">
     <div class="ctitle">⚖️ Quién le debe a quién</div>
     <div id="cuentas-deudas" style="padding:8px 0"></div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--g200)">
+      <div style="font-size:12px;font-weight:700;color:var(--slate);margin-bottom:8px">📋 Historial de pagos ObraNord → socios</div>
+      <div id="cuentas-liquidaciones"></div>
+    </div>
   </div>
 
   <!-- Detalle mensual por socio -->
@@ -2106,10 +2128,14 @@ td.m{color:var(--slate);font-size:12px}
           <select id="g-tipo-gasto" class="fc" onchange="toggleTipoGasto(this.value)" title="Personal: compra personal que desgravas el IVA pero NO cuenta como gasto empresa">
             <option value="empresa">🏢 Empresa (gasto normal)</option>
             <option value="personal">🧾 Personal — solo desgravo IVA</option>
+            <option value="sin_justificante">⏳ Pagado sin factura (regularizar después)</option>
           </select>
         </div>
         <div id="g-aviso-personal" style="display:none;grid-column:1/-1;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:8px 12px;font-size:11px;color:#856404">
           ⚠️ <strong>Gasto personal:</strong> El importe NO se descuenta del beneficio de ObraNord pero el IVA sí se registra para la liquidación trimestral.
+        </div>
+        <div id="g-aviso-sinjust" style="display:none;grid-column:1/-1;background:#fde8e8;border:1px solid var(--err);border-radius:8px;padding:8px 12px;font-size:11px;color:#7a1f1f">
+          ⏳ <strong>Pendiente de factura:</strong> este pago se cuenta en el coste del proyecto y en la deuda hacia el pagador, pero <strong>el IVA es estimado</strong> (no deducible todavía). Cuando llegue la factura real del proveedor, edita este gasto y cambia el tipo a "Empresa" para regularizarlo con el IVA correcto.
         </div>
         <div class="fgrp"><label class="flbl">Categoría *</label><select id="g-cat" class="fc" onchange="onGastoCatChange()"><option>Operativa</option><option>Marketing</option><option>Materiales</option><option>Subcontrata</option><option>Transporte</option><option>Oficina</option><option>Seguros</option><option>Gestoría</option><option>Personal IVA</option><option>Otros</option></select></div>
         <div class="fgrp" style="grid-column:1/-1"><label class="flbl">Descripción *</label><input id="g-desc" class="fc" placeholder="Ej: Hostinger — alojamiento web anual"></div>
@@ -2457,6 +2483,7 @@ let documents = (JSON.parse(localStorage.getItem('on_docs') || '[]')).map(functi
 let clientes = JSON.parse(localStorage.getItem('on_clientes') || '[]');
 let proyectos = JSON.parse(localStorage.getItem('on_proyectos') || '[]');
 let tesoreria = JSON.parse(localStorage.getItem('on_tesoreria') || '[]');
+let liquidaciones = JSON.parse(localStorage.getItem('on_liquidaciones') || '[]');
 let objetivos = JSON.parse(localStorage.getItem('on_objetivos') || 'null') || Array(12).fill(0).map((_,i)=>[12500,12500,12500,12500,12500,12500,12500,12500,12500,12500,12500,12500][i]);
 let tareas = JSON.parse(localStorage.getItem('on_tareas') || '[]');
 let ordenes = JSON.parse(localStorage.getItem('on_ordenes') || '[]');
@@ -2567,17 +2594,29 @@ async function sbDeleteAll(table) {
 function setSyncStatus(s) {
   _syncStatus = s;
   const el = document.getElementById('save-status');
-  if(!el) return;
-  const icons = {
-    local:   '',
-    syncing: '🔄 Guardando…',
-    ok:      '☁️ Supabase OK',
-    error:   '',
-    polling: '🔄 Comprobando…'
+  const dot = document.getElementById('conn-dot');
+  const dotLabel = document.getElementById('conn-label');
+  const states = {
+    connecting: {label:'Conectando…', color:'#C4A882', dot:'#C4A882', pulse:true},
+    connected:  {label:'Conectado',   color:'var(--ok)', dot:'#2D6A4F', pulse:false},
+    ok:         {label:'Conectado',   color:'var(--ok)', dot:'#2D6A4F', pulse:false},
+    syncing:    {label:'Guardando…',  color:'#C4A882', dot:'#C4A882', pulse:true},
+    polling:    {label:'Comprobando…',color:'#C4A882', dot:'#C4A882', pulse:true},
+    local:      {label:'Sin conectar',color:'var(--slate)', dot:'#8FA3B4', pulse:false},
+    error:      {label:'Falla de conexión', color:'var(--err)', dot:'#C0392B', pulse:false}
   };
-  el.textContent = icons[s] || s;
-  el.style.color = s==='ok'?'var(--ok)':s==='syncing'||s==='polling'?'var(--gold)':'var(--slate)';
-  if(s==='ok') setTimeout(()=>{const e=document.getElementById('save-status');if(e&&e.textContent.startsWith('☁️'))e.textContent='';},3000);
+  const st = states[s] || states.local;
+  if(dotLabel) dotLabel.textContent = st.label;
+  if(dot) {
+    dot.style.background = st.dot;
+    dot.style.boxShadow = st.pulse ? '0 0 0 3px '+st.dot+'33' : 'none';
+    dot.style.animation = st.pulse ? 'connPulse 1.2s ease-in-out infinite' : 'none';
+  }
+  // Legacy save-status text (kept for save feedback during typing)
+  if(el) {
+    if(s==='syncing') { el.textContent='🔄 Guardando…'; el.style.color='var(--gold)'; }
+    else if(el.textContent.includes('Guardando')) { el.textContent=''; }
+  }
 }
 
 function getBackupPayload() {
@@ -2587,7 +2626,7 @@ function getBackupPayload() {
     gastos, documents, clientes, proyectos,
     tesoreria, objetivos, empresa, tareas, ordenes, eventos,
     proveedores: PROVEEDORES,
-    gastoRecurrentes
+    gastoRecurrentes, liquidaciones
   };
 }
 
@@ -2605,14 +2644,18 @@ async function loadFromSheets() {
 async function pollSheetsVersion() {
   try {
     const rows = await sbFetch('empresa', 'GET', null, '?select=updated_at&limit=1');
-    if(!rows || !rows.length) return;
+    if(!rows || !rows.length) { setSyncStatus('error'); return; }
+    setSyncStatus('connected');
     const remoteTs = new Date(rows[0].updated_at).getTime();
     if(remoteTs > _lastRemoteSave + 15000) {
       console.log('[ObraNord] Datos remotos más nuevos — recargando desde Supabase…');
       const remote = await loadFromSupabase();
-      if(remote) applyRemoteData(remote, false);
+      if(remote) { applyRemoteData(remote, false); renderAllAfterSync(); }
     }
-  } catch(e) { /* silencioso */ }
+  } catch(e) {
+    setSyncStatus('error');
+    console.warn('[ObraNord] Polling falló:', e.message);
+  }
 }
 
 
@@ -2766,6 +2809,15 @@ async function saveToSupabase(payload) {
       }; }));
     }
 
+    // 13. LIQUIDACIONES (pagos ObraNord -> socios)
+    if(payload.liquidaciones && payload.liquidaciones.length) {
+      await sbUpsert('liquidaciones', payload.liquidaciones.map(function(l){ return {
+        id:String(l.id), fecha:l.fecha||'', acreedor:l.acreedor||'',
+        importe:l.importe||0, medio:l.medio||'', notas:l.notas||'',
+        updated_at:new Date().toISOString()
+      }; }));
+    }
+
     _lastRemoteSave = Date.now();
     localStorage.setItem('on_last_remote_save', String(_lastRemoteSave));
     _pendingSync = false;
@@ -2785,7 +2837,7 @@ async function loadFromSupabase() {
     setSyncStatus('syncing');
     const [
       empRows, cliRows, provRows, proyRows, docRows,
-      gasRows, grRows, ordRows, tesRows, tarRows, evRows, objRows
+      gasRows, grRows, ordRows, tesRows, tarRows, evRows, objRows, liqRows
     ] = await Promise.all([
       sbFetch('empresa','GET',null,'?limit=1'),
       sbFetch('clientes','GET',null,'?select=*&order=updated_at.desc'),
@@ -2799,6 +2851,7 @@ async function loadFromSupabase() {
       sbFetch('tareas','GET',null,'?select=*'),
       sbFetch('eventos','GET',null,'?select=*'),
       sbFetch('objetivos','GET',null,'?select=*'),
+      sbFetch('liquidaciones','GET',null,'?select=*').catch(function(){return [];}),
     ]);
 
     // Map DB rows back to ERP format
@@ -2868,6 +2921,9 @@ async function loadFromSupabase() {
       }; }),
       objetivos: (objRows||[]).map(function(o){ return {
         id:o.id, anio:o.anio, objetivo:o.objetivo_anual
+      }; }),
+      liquidaciones: (liqRows||[]).map(function(l){ return {
+        id:l.id, fecha:l.fecha, acreedor:l.acreedor, importe:l.importe, medio:l.medio, notas:l.notas
       }; })
     };
 
@@ -2908,6 +2964,7 @@ function applyRemoteData(remote, withConfirm) {
     if(remote.proyectos)  proyectos=remote.proyectos;
     if(remote.tesoreria)  tesoreria=remote.tesoreria;
     if(remote.objetivos)  objetivos=remote.objetivos;
+    if(remote.liquidaciones) { liquidaciones=remote.liquidaciones; localStorage.setItem('on_liquidaciones',JSON.stringify(liquidaciones)); }
     if(remote.empresa)    { empresa=remote.empresa; populateEmpresaFields(); }
     if(remote.tareas)     tareas=remote.tareas;
     if(remote.ordenes)    ordenes=remote.ordenes;
@@ -2966,6 +3023,7 @@ function saveData(auditAction, auditDetail) {
     localStorage.setItem('on_eventos',JSON.stringify(eventos));
     localStorage.setItem('on_proveedores',JSON.stringify(PROVEEDORES));
     localStorage.setItem('on_gasto_recurrentes',JSON.stringify(gastoRecurrentes));
+    localStorage.setItem('on_liquidaciones',JSON.stringify(liquidaciones));
     if(auditAction) logAudit(auditAction, auditDetail||'');
     // Auto-sync to Supabase (debounced 1.5s)
     if(_saveQueue) clearTimeout(_saveQueue);
@@ -3420,8 +3478,10 @@ function eliminarRecurrente(id) {
 }
 
 function toggleTipoGasto(tipo) {
-  const aviso = document.getElementById('g-aviso-personal');
-  if(aviso) aviso.style.display = tipo==='personal' ? '' : 'none';
+  const avisoPersonal = document.getElementById('g-aviso-personal');
+  const avisoSinJust = document.getElementById('g-aviso-sinjust');
+  if(avisoPersonal) avisoPersonal.style.display = tipo==='personal' ? '' : 'none';
+  if(avisoSinJust) avisoSinJust.style.display = tipo==='sin_justificante' ? '' : 'none';
   if(tipo==='personal') {
     const cat = document.getElementById('g-cat');
     if(cat) cat.value='Personal IVA';
@@ -5442,11 +5502,21 @@ function renderProyectos() {
     const pagado = pagos.reduce((s,pg)=>s+pg.importe,0);
     const pendienteFac = facDoc ? (facDoc.total - pagado) : 0;
     const pagoStr = pagos.length ? pagos.map(pg=>`<span style="font-size:10px;color:var(--ok)">${pg.fecha?pg.fecha.split('-').reverse().join('/'):'—'} €${pg.importe.toFixed(0)} (${pg.medio})</span>`).join('<br>') : '';
-    // OT calculations for real profit
+    // OT + gastos directos calculations for real profit
     const proyOTs = ordenes.filter(o=>o.proyCod===p.codigo||String(o.proyCod)===String(p.id));
     const totalOTCoste = proyOTs.reduce((s,o)=>s+o.coste,0);
-    const beneficioReal = (p.importeFac||0) - totalOTCoste;
-    const beneficioPct = p.importeFac>0 ? Math.round(beneficioReal/p.importeFac*100) : 0;
+    // Gastos vinculados directamente al proyecto (no via OT) — incluye sin_justificante
+    const proyGastosDirectos = gastos.filter(function(g){
+      return g.proyCod===p.codigo && g.estado!=='Anulado' && g.tipoGasto!=='personal' && !g.factura;
+    });
+    const totalGastosDirectos = proyGastosDirectos.reduce(function(s,g){return s+(g.total||0);},0);
+    // Facturación real: suma TODAS las facturas vinculadas al proyecto (no solo importeFac)
+    const facturasDelProy = documents.filter(function(d){
+      return d.type==='factura' && d.proyCod===p.codigo && d.estado!=='Anulado';
+    });
+    const facturadoReal = facturasDelProy.length ? facturasDelProy.reduce(function(s,d){return s+(d.total||0);},0) : (p.importeFac||0);
+    const beneficioReal = facturadoReal - totalOTCoste - totalGastosDirectos;
+    const beneficioPct = facturadoReal>0 ? Math.round(beneficioReal/facturadoReal*100) : 0;
     const margen=(p.importeFac||0)-(p.importePres||0);
     const margenPct=p.importePres>0?Math.round(margen/p.importePres*100):0;
     return `<tr>
@@ -5473,7 +5543,7 @@ function renderProyectos() {
         ${totalOTCoste>0?`<br><strong style="color:var(--err);font-size:12px">Total: €${totalOTCoste.toFixed(2)}</strong>`:''}
       </td>
       <td>
-        <strong style="font-size:15px;color:${beneficioReal>=0?'var(--ok)':'var(--err)'}">${p.importeFac>0?'€'+beneficioReal.toFixed(2):'—'}</strong>
+        <strong style="font-size:15px;color:${beneficioReal>=0?'var(--ok)':'var(--err)'}">${facturadoReal>0?'€'+beneficioReal.toFixed(2):'—'}</strong>
         ${p.importeFac>0&&totalOTCoste>0?`<br><span style="font-size:10px;color:var(--slate)">(${beneficioPct}%)</span>`:''}
       </td>
       <td style="font-size:10px;color:var(--slate)">${pagoStr||'—'}</td>
@@ -8707,7 +8777,19 @@ function renderOrdenes() {
       <td style="color:var(--err);font-weight:700">€${o.coste.toFixed(2)}</td>
       <td style="color:var(--ok);font-weight:700">€${(o.precioCli||0).toFixed(2)}</td>
       <td style="font-weight:800;color:${margen>=0?'var(--gold)':'var(--err)'}">€${margen.toFixed(2)}</td>
-      <td style="font-weight:800;color:${(()=>{const _p=proyectos.find(p=>p.codigo===o.proyCod||String(p.id)===o.proyCod);const _ots=ordenes.filter(x=>x.proyCod===o.proyCod);const _br=(_p?.importeFac||0)-_ots.reduce((s,x)=>s+(x.coste||0),0);return _br>=0?'var(--ok)':'var(--err)';})()}">${(()=>{const _p=proyectos.find(p=>p.codigo===o.proyCod||String(p.id)===o.proyCod);if(!_p||!_p.importeFac)return'<span style="color:var(--slate);font-size:11px">Sin factura</span>';const _ots=ordenes.filter(x=>x.proyCod===o.proyCod);const _br=(_p.importeFac||0)-_ots.reduce((s,x)=>s+(x.coste||0),0);return'€'+_br.toFixed(2);})()}</td>
+      <td style="font-weight:800;color:${(()=>{
+        const _p=proyectos.find(p=>p.codigo===o.proyCod||String(p.id)===o.proyCod);
+        const _facTotal=documents.filter(function(d){return d.type==='factura'&&d.proyCod===o.proyCod&&d.estado!=='Anulado';}).reduce(function(s,d){return s+(d.total||0);},0);
+        const _ots=ordenes.filter(x=>x.proyCod===o.proyCod);
+        const _br=_facTotal-_ots.reduce((s,x)=>s+(x.coste||0),0);
+        return _br>=0?'var(--ok)':'var(--err)';
+      })()}">${(()=>{
+        const _facTotal=documents.filter(function(d){return d.type==='factura'&&d.proyCod===o.proyCod&&d.estado!=='Anulado';}).reduce(function(s,d){return s+(d.total||0);},0);
+        if(!_facTotal)return'<span style="color:var(--slate);font-size:11px">Sin factura</span>';
+        const _ots=ordenes.filter(x=>x.proyCod===o.proyCod);
+        const _br=_facTotal-_ots.reduce((s,x)=>s+(x.coste||0),0);
+        return'€'+_br.toFixed(2);
+      })()}</td>
       <td><span class="badge ${estadoColor[o.estado]||'bgry'}">${o.estado}</span></td>
       <td>
         ${pagado
@@ -8728,21 +8810,22 @@ function abrirModalPagoOT(otId) {
   const o = ordenes.find(x=>x.id===otId); if(!o) return;
   const irpfPct = parseFloat(o.irpf)||0;
   const costeTotal = o.coste||0;
-  const ivaAmt = costeTotal * 0.21;
+  // El coste de la OT es el importe NETO acordado con el proveedor (lo que se le paga)
+  // El IVA se registra solo como apunte contable en el gasto
   const retencion = costeTotal * (irpfPct/100);
-  const totalAPagar = costeTotal + ivaAmt - retencion;
+  const totalAPagar = costeTotal - retencion;  // sin añadir IVA encima
   const yaPagado = (o.pagosProveedor||[]).reduce(function(s,p){return s+(p.importe||0);},0);
   const pendiente = totalAPagar - yaPagado;
   if(pendiente <= 0) { showToast('Esta OT ya está completamente pagada','ok'); return; }
 
   var promptMsg = [
-    'OT: ' + o.num + ' - Proveedor: ' + (o.proveedor||'sin nombre'),
-    'Coste base: EUR' + costeTotal.toFixed(2) + ' + IVA 21%: EUR' + ivaAmt.toFixed(2) + (irpfPct>0 ? ' - IRPF ' + irpfPct + '%: -EUR' + retencion.toFixed(2) : ''),
-    'Total a pagar: EUR' + totalAPagar.toFixed(2),
-    'Ya pagado: EUR' + yaPagado.toFixed(2),
-    'PENDIENTE: EUR' + pendiente.toFixed(2),
+    'OT: ' + o.num + ' · ' + (o.proveedor||'sin nombre'),
+    'Coste neto: €' + costeTotal.toFixed(2) + (irpfPct>0 ? ' · IRPF ' + irpfPct + '%: -€' + retencion.toFixed(2) : ''),
+    'Total a pagar al proveedor: €' + totalAPagar.toFixed(2),
+    'Ya pagado: €' + yaPagado.toFixed(2),
+    'PENDIENTE: €' + pendiente.toFixed(2),
     '',
-    'Cuanto pagas ahora? (max EUR' + pendiente.toFixed(2) + ')'
+    '¿Cuánto pagas ahora? (máx €' + pendiente.toFixed(2) + ')'
   ].join('\n');
   const importeInput = prompt(promptMsg, pendiente.toFixed(2));
   if(importeInput === null) return;
@@ -8765,19 +8848,20 @@ function abrirModalPagoOT(otId) {
     o.pagoProveedor = 'Parcial';
   }
 
-  // Create gasto for this payment
-  const pctImporte = costeTotal > 0 ? importePago / totalAPagar : 1;
-  const importeBase = costeTotal * pctImporte;
-  const ivaGasto = importeBase * 0.21;
-  const retGasto = importeBase * (irpfPct/100);
+  // Create gasto contable for this payment
+  // importeBase = proporción del coste neto correspondiente a este pago
+  const pctImporte = totalAPagar > 0 ? importePago / totalAPagar : 1;
+  const importeBase = Math.round(costeTotal * pctImporte * 100)/100;
+  const ivaGasto = Math.round(importeBase * 0.21 * 100)/100;
+  const retGasto = Math.round(importeBase * (irpfPct/100) * 100)/100;
   const gasto = {
     id: generateId(), fecha,
-    cat: 'Subcontrata',
+    cat: irpfPct > 0 ? 'Subcontrata' : 'Materiales',
     desc: 'Pago OT '+o.num+' · '+(o.proveedor||'Proveedor')+(esPagoTotal?'':' (parcial €'+importePago.toFixed(2)+')'),
     prov: o.proveedor||'', provCod:'', factura: o.num,
-    importe: Math.round(importeBase*100)/100,
-    ivaPct: 21, irpfPct, retencion: Math.round(retGasto*100)/100,
-    total: Math.round(importePago*100)/100,
+    importe: importeBase,
+    ivaPct: 21, irpfPct, retencion: retGasto,
+    total: Math.round((importeBase + ivaGasto - retGasto)*100)/100,
     metodo: 'Transferencia', pagador: 'ObraNord', estado: 'Pagado',
     proyCod: o.proyCod||'',
     notas: 'Auto desde OT '+o.num+(esPagoTotal?' (pago final)':' (pago parcial)')+(irpfPct>0?' · IRPF '+irpfPct+'%':'')
@@ -8949,18 +9033,74 @@ function exportOrdenes() {
 // ═══════════════════════════════════════════════════════
 const PAGADORES = ['Agustín','Franco','ObraNord'];
 
-function calcCuentas(gastosFiltrados) {
+function liquidarDeuda(acreedor, montoMax) {
+  const importeStr = prompt(
+    'ObraNord va a pagar a ' + acreedor + '\n\n' +
+    'Deuda pendiente: €' + parseFloat(montoMax).toFixed(2) + '\n\n' +
+    '¿Cuánto le pagas ahora? (máx €' + parseFloat(montoMax).toFixed(2) + ')',
+    parseFloat(montoMax).toFixed(2)
+  );
+  if(importeStr === null) return;
+  const importe = parseFloat(importeStr);
+  if(isNaN(importe) || importe <= 0) { showToast('Importe no válido','er'); return; }
+  if(importe > parseFloat(montoMax) + 0.01) { showToast('El importe supera la deuda pendiente','er'); return; }
+
+  const medio = prompt('¿Cómo le pagas? (Transferencia / Efectivo / Bizum)', 'Transferencia') || 'Transferencia';
+
+  const liq = {
+    id: generateId(),
+    fecha: new Date().toISOString().split('T')[0],
+    acreedor, importe, medio,
+    notas: ''
+  };
+  liquidaciones.unshift(liq);
+  localStorage.setItem('on_liquidaciones', JSON.stringify(liquidaciones));
+
+  // También registrar como salida en Tesorería para que aparezca en caja
+  tesoreria.unshift({
+    id: generateId(), tipo:'salida', fecha: liq.fecha, medio,
+    concepto: 'Liquidación deuda interna — ObraNord paga a ' + acreedor,
+    importe, estado:'Realizado', contraparte: acreedor, ref:'',
+    proyCod:'', _liquidacionId: liq.id
+  });
+
+  saveData('liquidar_deuda', 'ObraNord pagó €'+importe.toFixed(2)+' a '+acreedor);
+  renderCuentas(); renderTesoreria(); updateDashboard();
+  showToast('✅ Pago de €'+importe.toFixed(2)+' a '+acreedor+' registrado','ok');
+}
+
+function eliminarLiquidacion(id) {
+  if(!confirm('¿Eliminar este registro de pago? La deuda volverá a aparecer como pendiente.')) return;
+  liquidaciones = liquidaciones.filter(function(l){ return String(l.id)!==String(id); });
+  localStorage.setItem('on_liquidaciones', JSON.stringify(liquidaciones));
+  // Remove linked tesoreria entry too
+  tesoreria = tesoreria.filter(function(t){ return t._liquidacionId !== id; });
+  saveData('del_liquidacion', 'Liquidación eliminada');
+  renderCuentas(); renderTesoreria(); updateDashboard();
+  showToast('✅ Liquidación eliminada','ok');
+}
+
+function calcCuentas(gastosFiltrados, desde, hasta) {
   const gastosBase = gastosFiltrados || gastos.filter(function(g){ return g.estado!=='Anulado'; });
   const saldos = {};
   PAGADORES.forEach(function(a){ saldos[a]={}; PAGADORES.forEach(function(b){ saldos[a][b]=0; }); });
   gastosBase.forEach(function(g){
     // Gastos personales (solo desgravo IVA) NO generan deuda de ObraNord hacia el socio
+    // sin_justificante SÍ genera deuda (es un anticipo real del socio a la empresa)
     if(g.tipoGasto==='personal') return;
     const pagador = g.pagador||'ObraNord';
     const importe = g.total||0;
     if(pagador==='Agustín') { saldos['ObraNord']['Agustín'] += importe; }
     else if(pagador==='Franco') { saldos['ObraNord']['Franco'] += importe; }
   });
+  // Restar liquidaciones ya pagadas por ObraNord a cada socio (histórico completo, no solo del período)
+  (liquidaciones||[]).forEach(function(l){
+    if(l.acreedor && saldos['ObraNord'][l.acreedor] !== undefined) {
+      saldos['ObraNord'][l.acreedor] -= (l.importe||0);
+    }
+  });
+  // Nunca mostrar deuda negativa (si se liquidó de más, queda en 0)
+  PAGADORES.forEach(function(a){ if(saldos['ObraNord'][a] < 0) saldos['ObraNord'][a] = 0; });
   return saldos;
 }
 
@@ -9218,19 +9358,36 @@ function renderCuentas() {
     }).join('') : '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--slate)">Sin datos en este período</td></tr>';
   }
 
-  // ── Deudas ────────────────────────────────────────────
+  // ── Deudas (histórico completo, no limitado al período) ──
+  const saldosGlobal = calcCuentas(gastos.filter(function(g){return g.estado!=='Anulado';}));
   const deudasEl = document.getElementById('cuentas-deudas');
   if(deudasEl) {
     const rows=[];
-    PAGADORES.forEach(function(d){ PAGADORES.forEach(function(a){ if(d===a) return; const m=saldos[d][a]; if(m>0.01) rows.push({deudor:d,acreedor:a,monto:m}); }); });
+    PAGADORES.forEach(function(d){ PAGADORES.forEach(function(a){ if(d===a) return; const m=saldosGlobal[d][a]; if(m>0.01) rows.push({deudor:d,acreedor:a,monto:m}); }); });
     deudasEl.innerHTML=rows.length ? rows.map(function(r){
       return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--g200)">'
         +'<div style="display:flex;align-items:center;gap:12px"><span style="font-size:22px">💸</span>'
         +'<div><strong>'+r.deudor+'</strong> debe pagar a <strong>'+r.acreedor+'</strong>'
-        +'<div style="font-size:12px;color:var(--slate)">Por gastos anticipados en el período</div></div></div>'
+        +'<div style="font-size:12px;color:var(--slate)">Saldo pendiente acumulado (histórico)</div></div></div>'
+        +'<div style="display:flex;align-items:center;gap:10px">'
         +'<div style="font-size:20px;font-weight:800;color:var(--err)">'+fmt(r.monto)+'</div>'
-        +'</div>';
+        +'<button class="btn btn-g btn-s" onclick="liquidarDeuda(\''+r.acreedor+'\','+r.monto.toFixed(2)+')">💸 Marcar como pagado</button>'
+        +'</div></div>';
     }).join('') : '<div style="text-align:center;color:var(--ok);padding:20px;font-size:14px">✅ Sin deudas entre los socios</div>';
+  }
+
+  // ── Historial de liquidaciones ────────────────────────
+  const liqEl = document.getElementById('cuentas-liquidaciones');
+  if(liqEl) {
+    const liqOrdenadas = (liquidaciones||[]).slice().sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
+    liqEl.innerHTML = liqOrdenadas.length ? liqOrdenadas.map(function(l){
+      const fechaFmt = l.fecha ? l.fecha.split('-').reverse().join('/') : '—';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--g200);font-size:12px">'
+        +'<div><strong>'+fechaFmt+'</strong> — ObraNord pagó a <strong>'+l.acreedor+'</strong>'+(l.notas?' · '+escapeHtml(l.notas):'')+'</div>'
+        +'<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;color:var(--ok)">€'+(l.importe||0).toFixed(2)+'</span>'
+        +'<button class="btn btn-s" style="padding:3px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer;font-size:11px" onclick="eliminarLiquidacion(\''+l.id+'\')">🗑</button></div>'
+        +'</div>';
+    }).join('') : '<div style="text-align:center;color:var(--slate);padding:10px;font-size:12px">Sin liquidaciones registradas todavía</div>';
   }
 
   // ── Detalle completo de gastos por pagador ───────────────
@@ -9568,6 +9725,99 @@ document.addEventListener('keydown', e=>{
   }
 });
 
+
+// ═══════════════════════════════════════════════════════
+// BUSCADOR GENERAL (topbar)
+// ═══════════════════════════════════════════════════════
+function globalSearch(q) {
+  const resEl = document.getElementById('global-search-results');
+  if(!resEl) return;
+  q = (q||'').trim().toLowerCase();
+  if(q.length < 2) { resEl.style.display='none'; return; }
+
+  const results = [];
+
+  // Clientes
+  clientes.forEach(function(c){
+    const hay = (c.nombre||'')+' '+(c.codigo||'')+' '+(c.nif||'')+' '+(c.email||'');
+    if(hay.toLowerCase().includes(q)) {
+      results.push({tipo:'cliente', icon:'👤', titulo:c.nombre, sub:(c.codigo||'')+(c.nif?' · '+c.nif:''), action:"showSec('clientes');setTimeout(()=>openClienteModal('"+c.id+"'),200)"});
+    }
+  });
+
+  // Proyectos
+  proyectos.forEach(function(p){
+    const hay = (p.nombre||'')+' '+(p.codigo||'')+' '+(p.clienteNombre||'');
+    if(hay.toLowerCase().includes(q)) {
+      results.push({tipo:'proyecto', icon:'🏗️', titulo:p.nombre, sub:(p.codigo||'')+' · '+(p.clienteNombre||'')+' · '+(p.estado||''), action:"showSec('proyectos')"});
+    }
+  });
+
+  // Documentos (facturas, presupuestos, proformas)
+  documents.forEach(function(d){
+    const hay = (d.num||'')+' '+(d.cliente||'')+' '+(d.obra||'');
+    if(hay.toLowerCase().includes(q)) {
+      const tipoLbl = {factura:'Factura',presupuesto:'Presupuesto',proforma:'Proforma',rectificativa:'Rectificativa'}[d.type]||d.type;
+      const icon = {factura:'🧾',presupuesto:'📋',proforma:'📄',rectificativa:'↩️'}[d.type]||'📄';
+      results.push({tipo:'documento', icon:icon, titulo:d.num+' — '+(d.cliente||''), sub:tipoLbl+' · €'+(d.total||0).toFixed(2)+' · '+(d.estado||''), action:"showSec('historial');setTimeout(()=>verDetalleDoc('"+d.id+"'),200)"});
+    }
+  });
+
+  // Proveedores
+  PROVEEDORES.forEach(function(p){
+    const nombre = p['NOMBRE SL']||p['NOMBRE']||'';
+    const hay = nombre+' '+(p['CODIGO PROVEEDOR']||'')+' '+(p['RUBRO']||'');
+    if(hay.toLowerCase().includes(q)) {
+      results.push({tipo:'proveedor', icon:'🏭', titulo:nombre, sub:(p['CODIGO PROVEEDOR']||'')+' · '+(p['RUBRO']||''), action:"showSec('proveedores')"});
+    }
+  });
+
+  if(!results.length) {
+    resEl.innerHTML = '<div style="padding:16px;text-align:center;color:var(--slate);font-size:13px">Sin resultados para "'+escapeHtml(q)+'"</div>';
+    resEl.style.display='';
+    return;
+  }
+
+  const grupos = {cliente:'👤 Clientes', proyecto:'🏗️ Proyectos', documento:'📄 Documentos', proveedor:'🏭 Proveedores'};
+  let html = '';
+  Object.keys(grupos).forEach(function(tipo) {
+    const items = results.filter(function(r){return r.tipo===tipo;}).slice(0,6);
+    if(!items.length) return;
+    html += '<div style="padding:6px 12px;font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;background:var(--cream)">'+grupos[tipo]+'</div>';
+    items.forEach(function(r){
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--g200)" '
+        + 'onmousedown="'+r.action+'; document.getElementById(\'global-search-input\').value=\'\'; document.getElementById(\'global-search-results\').style.display=\'none\';" '
+        + 'onmouseover="this.style.background=\'var(--g100)\'" onmouseout="this.style.background=\'\'">'
+        + '<span style="font-size:16px">'+r.icon+'</span>'
+        + '<div style="min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escapeHtml(r.titulo)+'</div>'
+        + '<div style="font-size:11px;color:var(--slate);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escapeHtml(r.sub)+'</div></div>'
+        + '</div>';
+    });
+  });
+  resEl.innerHTML = html;
+  resEl.style.display='';
+}
+
+function renderAllAfterSync() {
+  renderProveedores(PROVEEDORES);
+  renderGastos();
+  updateDashboard();
+  updateGastosKPIs();
+  renderObjetivos();
+  populateClienteSelects();
+  populateProyectoSelects();
+  populateRectificativaOriginalSel();
+  renderTareas();
+  renderHistory();
+  renderProyectos();
+  renderClientes();
+  renderTesoreria();
+  renderFacPendientes();
+  renderPresPendientes();
+  renderOrdenes();
+  renderCuentas();
+}
+
 window.addEventListener('DOMContentLoaded', ()=>{
   // Populate empresa fields from saved data
   populateEmpresaFields();
@@ -9629,20 +9879,19 @@ window.addEventListener('DOMContentLoaded', ()=>{
   initMobileUI();
   initTipoIS();
   getCuentasPct();
-  // Sheets: auto-sync al arrancar + polling cada 60s
-  if(GAS_URL) {
-    setTimeout(async()=>{
-      const remote = await loadFromSupabase();
-      if(remote && remote.fecha) {
-        const remoteTs = new Date(remote.fecha).getTime();
-        const localTs = _lastRemoteSave || 0;
-        if(remoteTs > localTs + 30000) {
-          applyRemoteData(remote, true);
-        }
-      }
-      startPolling();
-    }, 2000);
-  }
+  // Supabase: auto-conexión y carga al arrancar (sin configuración manual) + polling cada 60s
+  setSyncStatus('connecting');
+  setTimeout(async()=>{
+    const remote = await loadFromSupabase();
+    if(remote) {
+      applyRemoteData(remote, false);
+      renderAllAfterSync();
+      setSyncStatus('connected');
+    } else {
+      setSyncStatus('error');
+    }
+    startPolling();
+  }, 600);
   // Set current trimestre
   const curT=Math.floor(new Date().getMonth()/3)+1;
   const tSel=document.getElementById('cont-trimestre'); if(tSel) tSel.value=curT;
