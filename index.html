@@ -284,7 +284,6 @@ td.m{color:var(--slate);font-size:12px}
   </div>
   <div style="margin-bottom:20px">
     <div class="slabel">Documentos</div>
-    <div class="nav" onclick="showSec('ordenes')"><span class="ni">💳</span>Pago a Proveedores</div>
     <div class="nav" onclick="showSec('proyectos')"><span class="ni">🏗️</span>Proyectos</div>
     <div class="nav" onclick="showSec('historial')"><span class="ni">📁</span>Historial</div>
   </div>
@@ -811,24 +810,44 @@ td.m{color:var(--slate);font-size:12px}
 <!-- ═══════════════ GASTOS ═══════════════ -->
 <div id="s-gastos" class="sec">
   <div class="ph">
-    <div><div class="pt">Control de gastos 2026</div><div class="ps">Registro completo · IVA soportado · Exportación Excel</div></div>
+    <div><div class="pt">Gastos · Proveedores · Obra</div><div class="ps">Registro completo · IVA soportado · OTs vinculadas · Exportación Excel</div></div>
     <div class="btn-grp">
       <button class="btn btn-o btn-s" onclick="exportGastosCSV()">⬇ Exportar Excel</button>
       <button class="btn btn-p" onclick="openGastoModal()">+ Registrar gasto</button>
+      <button class="btn btn-o btn-s" onclick="openOrdenModal()" title="Nueva orden de trabajo a proveedor">🔧 Nueva OT</button>
       <button class="btn btn-o" onclick="toggleRecurrentesPanel()" title="Ver gastos recurrentes">🔁 Recurrentes</button>
     </div>
   </div>
-  <div class="kgrid">
+  <!-- KPIs gastos operativos -->
+  <div class="kgrid" id="kgrid-gastos">
     <div class="kcard"><div class="klbl">Total gastado (base)</div><div class="kval" id="gkpi-base">€0.00</div><div class="ksub">Sin IVA</div></div>
     <div class="kcard"><div class="klbl">IVA soportado</div><div class="kval" id="gkpi-iva">€0.00</div><div class="ksub">Recuperable trimestralmente</div></div>
     <div class="kcard"><div class="klbl">Total con IVA</div><div class="kval" id="gkpi-total">€0.00</div><div class="ksub">Desembolso real de caja</div></div>
     <div class="kcard"><div class="klbl">Nº de gastos</div><div class="kval" id="gkpi-count">0</div><div class="ksub">Este año (pendientes entre paréntesis)</div></div>
   </div>
+  <!-- KPIs OTs (solo visible en vista Obra) -->
+  <div class="kgrid" id="kgrid-ots" style="display:none">
+    <div class="kcard" style="border-top-color:var(--navy)"><div class="klbl">📦 OTs activas</div><div class="kval" id="ot-k-activas2">0</div><div class="ksub">En ejecución</div></div>
+    <div class="kcard" style="border-top-color:var(--err)"><div class="klbl">💸 Coste proveedores</div><div class="kval" id="ot-k-coste2">€0.00</div><div class="ksub">Total pagado a proveedores</div></div>
+    <div class="kcard" style="border-top-color:var(--ok)"><div class="klbl">💰 Facturado clientes</div><div class="kval" id="ot-k-fac2">€0.00</div><div class="ksub">De proyectos con OT</div></div>
+    <div class="kcard" style="border-top-color:var(--gold)"><div class="klbl">📊 Margen bruto</div><div class="kval" id="ot-k-margen2">€0.00</div><div class="ksub">Facturado − Coste</div></div>
+  </div>
+  <!-- Alerta OTs pendiente pago (solo en vista Obra) -->
+  <div id="ot-pend-alert2" style="display:none"></div>
   <div id="panel-recurrentes" style="display:none;margin-bottom:18px">
     <div class="card">
       <div class="ctitle">🔁 Gastos recurrentes activos <span style="font-size:11px;font-weight:400;color:var(--slate)">— se generan automáticamente al abrir el ERP</span></div>
       <div id="gastos-recurrentes-list"><div style="text-align:center;color:var(--slate);padding:20px;font-size:13px">Sin gastos recurrentes configurados. Actívalos al registrar un nuevo gasto.</div></div>
     </div>
+  </div>
+  <!-- VISTA TIPO -->
+  <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center;border-bottom:2px solid var(--g200);padding-bottom:10px">
+    <span style="font-size:11px;font-weight:700;color:var(--slate);text-transform:uppercase;letter-spacing:1px;margin-right:4px">Vista:</span>
+    <button class="btn btn-o btn-s vista-gasto-btn active" id="vista-todos" onclick="setVistaGasto('todos')" style="border-color:var(--gold);background:rgba(196,168,130,.1)">📋 Todos</button>
+    <button class="btn btn-o btn-s vista-gasto-btn" id="vista-operativos" onclick="setVistaGasto('operativos')">🏢 Operativos</button>
+    <button class="btn btn-o btn-s vista-gasto-btn" id="vista-obra" onclick="setVistaGasto('obra')">🔧 Obra (OTs)</button>
+    <button class="btn btn-o btn-s vista-gasto-btn" id="vista-personal" onclick="setVistaGasto('personal')">🧾 Personal IVA</button>
+    <button class="btn btn-o btn-s vista-gasto-btn" id="vista-sinjust" onclick="setVistaGasto('sinjust')">⏳ Pendiente factura</button>
   </div>
   <!-- FILTROS RÁPIDOS POR MES -->
   <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
@@ -852,8 +871,20 @@ td.m{color:var(--slate);font-size:12px}
   </div>
   <!-- RESUMEN DEL FILTRO ACTIVO -->
   <div id="gastos-filtro-resumen" style="display:none;margin-bottom:10px;padding:8px 14px;background:rgba(196,168,130,.1);border-radius:8px;border-left:3px solid var(--gold);font-size:12px;color:var(--dark)"></div>
-  <div class="card"><div class="ctitle">💸 Registro de gastos</div>
-    <div class="tw"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Proveedor</th><th>Nº Fact.</th><th>Base €</th><th>IVA%</th><th>IRPF%</th><th>Total €</th><th>Pago</th><th>Pagado por</th><th>Estado</th><th>Proyecto</th><th style="width:64px"></th></tr></thead><tbody id="gastos-tbody"></tbody></table></div>
+  <div class="card">
+    <div class="ctitle" id="gastos-card-title">💸 Registro de gastos</div>
+    <div class="tw">
+      <!-- Vista: gastos operativos/todos -->
+      <table id="gastos-table-normal">
+        <thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Proveedor</th><th>Nº Fact.</th><th>Base €</th><th>IVA%</th><th>IRPF%</th><th>Total €</th><th>Pago</th><th>Pagado por</th><th>Estado</th><th>Proyecto</th><th style="width:64px"></th></tr></thead>
+        <tbody id="gastos-tbody"></tbody>
+      </table>
+      <!-- Vista: obra (OTs) -->
+      <table id="gastos-table-obra" style="display:none">
+        <thead><tr><th>Nº OT</th><th>Proyecto</th><th>Proveedor</th><th>Descripción</th><th>Coste base</th><th>IVA (21%)</th><th>Total a pagar</th><th>Pagado</th><th>Pendiente</th><th>Estado pago</th><th>Fecha</th><th style="width:80px"></th></tr></thead>
+        <tbody id="ots-tbody-unified"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -3678,6 +3709,124 @@ function getGastoFechaRange() {
   return { desde: '', hasta: '', label: '' };
 }
 
+
+// ═══════════════════════════════════════════════════════
+// VISTA UNIFICADA GASTOS + OTs
+// ═══════════════════════════════════════════════════════
+let _vistaGasto = 'todos';
+
+function setVistaGasto(vista) {
+  _vistaGasto = vista;
+  // Update tab buttons
+  document.querySelectorAll('.vista-gasto-btn').forEach(function(b){
+    b.classList.remove('active');
+    b.style.borderColor = '';
+    b.style.background = '';
+  });
+  const activeBtn = document.getElementById('vista-'+vista);
+  if(activeBtn) {
+    activeBtn.classList.add('active');
+    activeBtn.style.borderColor = 'var(--gold)';
+    activeBtn.style.background = 'rgba(196,168,130,.1)';
+  }
+  // Show/hide tables and KPI grids
+  const isObra = vista === 'obra';
+  const tableNormal = document.getElementById('gastos-table-normal');
+  const tableObra = document.getElementById('gastos-table-obra');
+  const kgridGastos = document.getElementById('kgrid-gastos');
+  const kgridOts = document.getElementById('kgrid-ots');
+  const alertObra = document.getElementById('ot-pend-alert2');
+  if(tableNormal) tableNormal.style.display = isObra ? 'none' : '';
+  if(tableObra) tableObra.style.display = isObra ? '' : 'none';
+  if(kgridGastos) kgridGastos.style.display = isObra ? 'none' : '';
+  if(kgridOts) kgridOts.style.display = isObra ? '' : 'none';
+  if(alertObra) alertObra.style.display = isObra ? '' : 'none';
+  // Update title
+  const title = document.getElementById('gastos-card-title');
+  const titles = {todos:'💸 Registro de gastos', operativos:'🏢 Gastos operativos', obra:'🔧 Órdenes de trabajo (OTs)', personal:'🧾 Gastos personales IVA', sinjust:'⏳ Pendientes de factura'};
+  if(title) title.textContent = titles[vista] || '💸 Registro de gastos';
+  // Also update category filter accordingly
+  const catSel = document.getElementById('g-fcat');
+  if(catSel) {
+    if(vista==='personal') catSel.value = 'Personal IVA';
+    else if(vista!=='todos') catSel.value = '';
+  }
+  renderGastos();
+  if(isObra) renderOTsUnified();
+}
+
+function renderOTsUnified() {
+  const tbody = document.getElementById('ots-tbody-unified');
+  if(!tbody) return;
+
+  // Update KPIs
+  const activas = ordenes.filter(function(o){ return o.estado==='En ejecución'||o.estado==='Aceptada'; });
+  const totalCoste = ordenes.reduce(function(s,o){return s+(o.coste||0);},0);
+  const proyConOT = [...new Set(ordenes.map(function(o){return o.proyCod;}))];
+  const totalFac = proyConOT.reduce(function(s,cod){
+    const p = proyectos.find(function(x){return x.codigo===cod||String(x.id)===cod;});
+    return s+(p ? (documents.filter(function(d){return d.type==='factura'&&d.proyCod===cod&&d.estado!=='Anulado';}).reduce(function(s2,d){return s2+(d.total||0);},0)) : 0);
+  },0);
+  const margen = totalFac - totalCoste;
+  const setK = function(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; };
+  setK('ot-k-activas2', activas.length);
+  setK('ot-k-coste2', '€'+totalCoste.toFixed(2));
+  setK('ot-k-fac2', '€'+totalFac.toFixed(2));
+  const mEl = document.getElementById('ot-k-margen2');
+  if(mEl){ mEl.textContent=(margen>=0?'+':'')+' €'+Math.abs(margen).toFixed(2); mEl.style.color=margen>=0?'var(--ok)':'var(--err)'; }
+
+  // Pending alert
+  const pendPago = ordenes.filter(function(o){ return !o.pagadoProveedor && o.estado!=='Cancelada'; });
+  const alertEl = document.getElementById('ot-pend-alert2');
+  if(alertEl && pendPago.length) {
+    alertEl.innerHTML = '<div style="background:rgba(193,18,31,.08);border:1px solid rgba(193,18,31,.2);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px">'
+      +'<strong style="color:var(--err)">⚠️ '+pendPago.length+' órdenes pendientes de pago al proveedor</strong>'
+      +' · Total pendiente: <strong>€'+pendPago.reduce(function(s,o){var c=o.coste||0;var p=(o.pagosProveedor||[]).reduce(function(s2,x){return s2+(x.importe||0);},0);return s+(c-p);},0).toFixed(2)+'</strong>'
+      +'</div>';
+  }
+
+  // Render rows
+  const q = (document.getElementById('ot-search')?.value||document.getElementById('g-search')?.value||'').toLowerCase();
+  const list = ordenes.filter(function(o){
+    return !q || (o.num||'').toLowerCase().includes(q) || (o.proveedor||'').toLowerCase().includes(q) || (o.proyCod||'').toLowerCase().includes(q) || (o.desc||'').toLowerCase().includes(q);
+  });
+
+  if(!list.length) {
+    tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--slate)">Sin órdenes de trabajo. Crea una con "+ Nueva OT".</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(function(o){
+    const proj = proyectos.find(function(p){return p.codigo===o.proyCod||String(p.id)===o.proyCod;});
+    const base = o.coste||0;
+    const iva = Math.round(base*0.21*100)/100;
+    const total = base+iva;
+    const pagado = Math.round((o.pagosProveedor||[]).reduce(function(s,p){return s+(p.importe||0);},0)*100)/100;
+    const pendiente = Math.max(0,Math.round((base-pagado)*100)/100);
+    const estadoPago = pagado >= base*0.999 ? '<span class="badge bsuc">✅ Pagado</span>'
+      : pagado > 0 ? '<span class="badge bwrn">⏳ Parcial</span>'
+      : '<span class="badge berr">💸 Pendiente</span>';
+    return '<tr>'
+      +'<td><strong style="color:var(--gold)">'+escapeHtml(o.num||'')+'</strong></td>'
+      +'<td>'+(proj?'<span class="badge bgry" style="font-size:10px">'+escapeHtml(proj.codigo||'')+'</span><br><span style="font-size:11px">'+escapeHtml((proj.nombre||'').substring(0,22))+'</span>':'<span style="color:var(--slate)">—</span>')+'</td>'
+      +'<td>'+escapeHtml(o.proveedor||'—')+'</td>'
+      +'<td style="font-size:12px;max-width:180px">'+escapeHtml((o.desc||'').substring(0,60))+((o.desc||'').length>60?'...':'')+'</td>'
+      +'<td style="color:var(--err);font-weight:700">€'+base.toFixed(2)+'</td>'
+      +'<td style="color:var(--slate)">€'+iva.toFixed(2)+'</td>'
+      +'<td style="font-weight:700">€'+total.toFixed(2)+'</td>'
+      +'<td style="color:var(--ok)">€'+pagado.toFixed(2)+'</td>'
+      +'<td style="color:'+(pendiente>0?'var(--err)':'var(--ok)')+'">€'+pendiente.toFixed(2)+'</td>'
+      +'<td>'+estadoPago+'</td>'
+      +'<td class="m">'+(o.fecha||'—')+'</td>'
+      +'<td style="white-space:nowrap">'
+        +(pendiente > 0.01 ? '<button class="btn btn-o btn-s" style="padding:4px 8px" onclick="abrirModalPagoOT(\"'+o.id+'\")">💸 Pagar</button> ' : '')
+        +'<button class="btn btn-o btn-s" style="padding:4px 8px" onclick="openOrdenModal(\"'+o.id+'\")">✏️</button> '
+        +'<button class="btn btn-s" style="padding:4px 8px;background:var(--errbg);color:var(--err);border:none;border-radius:6px;cursor:pointer" onclick="deleteOrden(\"'+o.id+'\")">🗑</button>'
+      +'</td>'
+      +'</tr>';
+  }).join('');
+}
+
 function renderGastos() {
   const q=(document.getElementById('g-search')?.value||'').toLowerCase();
   const fcat=document.getElementById('g-fcat')?.value||'';
@@ -3687,17 +3836,22 @@ function renderGastos() {
   const desde = range.desde || '';
   const hasta  = range.hasta  || '';
 
-  let list=gastos.filter(g=>{
+  let list=gastos.filter(function(g){
     const mq=!q||(g.desc||'').toLowerCase().includes(q)||(g.cat||'').toLowerCase().includes(q)||(g.prov||'').toLowerCase().includes(q);
     const mc=!fcat||g.cat===fcat;
     const me=!festado||g.estado===festado;
     const mp=!fpagador||g.pagador===fpagador;
     const mf=!desde||!g.fecha||(g.fecha>=desde);
     const mh=!hasta||!g.fecha||(g.fecha<=hasta);
-    // Modo próximos: solo pendientes
-    if(range.proximosMode) return mq&&mc&&mp&&mf&&mh&&g.estado==='Pendiente';
-    return mq&&mc&&me&&mp&&mf&&mh;
-  }).sort((a,b)=>(b.fecha||'')>(a.fecha||'')?1:-1);
+    // Vista filter
+    const mv = _vistaGasto==='todos' ? true
+      : _vistaGasto==='operativos' ? (g.tipoGasto!=='personal' && g.tipoGasto!=='sin_justificante' && !g.factura?.startsWith('OT-'))
+      : _vistaGasto==='personal' ? (g.tipoGasto==='personal')
+      : _vistaGasto==='sinjust' ? (g.tipoGasto==='sin_justificante')
+      : true; // obra vista handled separately
+    if(range.proximosMode) return mq&&mc&&mp&&mf&&mh&&g.estado==='Pendiente'&&mv;
+    return mq&&mc&&me&&mp&&mf&&mh&&mv;
+  }).sort(function(a,b){return (b.fecha||'')>(a.fecha||'')?1:-1;});
 
   // Resumen del filtro activo
   const resEl = document.getElementById('gastos-filtro-resumen');
@@ -4023,8 +4177,11 @@ function saveToHistory(item) {
 function autoLinkDocToProject(doc) {
   if(doc.type==='presupuesto') {
     // Check if project already exists for this presupuesto number
-    const existing = proyectos.find(p => p.presRef === doc.num);
-    if(!existing) {
+    // Find project: by presRef match, by proyCod, or by client+presupuesto state
+    var existingPres = proyectos.find(function(p){ return p.presRef === doc.num; })
+      || (doc.proyCod ? proyectos.find(function(p){ return p.codigo===doc.proyCod||String(p.id)===doc.proyCod; }) : null)
+      || proyectos.find(function(p){ return p.clienteNombre===doc.cliente && (p.estado==='Presupuesto'||p.estado==='En captación'); });
+    if(!existingPres) {
       // Create new project automatically
       const p = {
         id: generateId(),
@@ -4044,9 +4201,9 @@ function autoLinkDocToProject(doc) {
       };
       proyectos.unshift(p);
     } else {
-      existing.importePres = doc.total||0;
-      existing.clienteNombre = doc.cliente||existing.clienteNombre;
-      // If re-saved keep state in sync
+      existingPres.importePres = doc.total||0;
+      existingPres.presRef = doc.num||existingPres.presRef;
+      existingPres.clienteNombre = doc.cliente||existingPres.clienteNombre;
       syncProyectoFromDoc(doc);
     }
   }
@@ -7522,9 +7679,18 @@ function guardarPresupuesto() {
   // Link to project — autoLinkDocToProject handles creation/update automatically
   const proyCodSel = document.getElementById('p-proyecto')?.value||'';
   if(proyCodSel) {
-    const proj = proyectos.find(p=>p.codigo===proyCodSel);
-    if(proj) { proj.importePres=data.total; proj.presRef=data.num; }
+    const proj = proyectos.find(function(p){ return p.codigo===proyCodSel||String(p.id)===proyCodSel; });
+    if(proj) {
+      proj.importePres = data.total;
+      proj.presRef = data.num;
+      proj.clienteNombre = data.cliente||proj.clienteNombre;
+    }
     data.proyCod = proyCodSel;
+  } else {
+    // No project selected — let autoLinkDocToProject handle it (matches by client/presRef)
+    // but first try to find existing project by presRef to update it
+    const existByRef = proyectos.find(function(p){ return p.presRef===data.num || (data.proyCod && (p.codigo===data.proyCod||String(p.id)===data.proyCod)); });
+    if(existByRef) { existByRef.importePres = data.total; existByRef.presRef = data.num; }
   }
 
   if(editId) {
@@ -9816,6 +9982,7 @@ function renderAllAfterSync() {
   renderPresPendientes();
   renderOrdenes();
   renderCuentas();
+  if(typeof _vistaGasto!=='undefined'&&_vistaGasto==='obra') renderOTsUnified();
 }
 
 window.addEventListener('DOMContentLoaded', ()=>{
